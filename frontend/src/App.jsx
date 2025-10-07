@@ -2,18 +2,17 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 // Pages
-import Home from "./pages/Home";
-import GioiThieu from "./pages/about/GioiThieu";
-import BanTin from "./pages/post/BanTin";
-import BatDongSan from "./pages/BatDongSan/BatDongSan";
-import Dashboard from "./pages/Dashboard/Dashboard";
-
+import Home from "./modules/client/home/Home";
+import GioiThieu from "./modules/client/about/GioiThieu";
+import BanTin from "./modules/client/post/BanTin";
+import BatDongSan from "./modules/client/BatDongSan/BatDongSan";
+import Dashboard from "./modules/client/Dashboard/Dashboard";
 // Auth UI
-import Login from "./auth/login/Login";  
-import Register from "./auth/register/Register";
-
+import Login from "./modules/auth/pages/login";
+import Register from "./modules/auth/pages/register";
 // Route bảo vệ
-import PrivateRoute from "./routes/PrivateRoute";
+import PrivateRoute from "./guards/PrivateRoute";
+
 
 const router = createBrowserRouter([
   {

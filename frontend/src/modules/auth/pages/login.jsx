@@ -1,7 +1,7 @@
-// src/auth/login/Login.jsx
+// frontend/src/modules/auth/pages/login.jsx
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
+import useAuth from "../hooks/useAuth";
 
 export default function Login() {
   const navigate = useNavigate();

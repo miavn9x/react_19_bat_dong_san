@@ -1,11 +1,11 @@
-// src/hooks/useAuth.js
+// frontend/src/modules/auth/hooks/useAuth.js
 import { useEffect, useState, useCallback } from "react";
 import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
   getMe,
-} from "../services/auth";
+} from "../services/auth.js";
 
 export default function useAuth() {
   const [user, setUser] = useState(() => {

@@ -1,5 +1,5 @@
-// src/services/auth.js
-import api from "../lib/api";
+// frontend/src/modules/auth/services/auth.js
+import api from "../../../services/http";
 
 export const AUTH_EVENT = "auth-changed";
 
