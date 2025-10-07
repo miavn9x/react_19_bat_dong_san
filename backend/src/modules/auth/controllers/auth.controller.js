@@ -1,7 +1,6 @@
-// // backend/src/controllers/auth.controller.js
-
+// backend/src/modules/auth/controllers/auth.controller.js
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const User = require("../../users/models/user.model");
 
 /** Ký access token (thêm role vào payload) */
 function signToken(user) {
@@ -20,7 +19,6 @@ async function register(req, res) {
       return res.status(400).json({ message: "name, email, password are required" });
     }
 
-    // Luôn tạo với role mặc định 'user' (không cho client set role lúc đăng ký)
     const user = await User.create({ name, email, password, avatar, phone, address, role: "user" });
 
     const token = signToken(user);
@@ -55,7 +53,12 @@ async function login(req, res) {
     const ok = await user.comparePassword(password);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = signToken(user);
+    const token = jwt.sign(
+      { sub: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES || "1h" }
+    );
+
     return res.json({
       token,
       user: {

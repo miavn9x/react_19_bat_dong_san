@@ -1,6 +1,4 @@
-// // backend/src/middlewares/auth.js
-
-
+// backend/src/middlewares/auth.js
 const jwt = require("jsonwebtoken");
 
 /** Yêu cầu có token hợp lệ */
