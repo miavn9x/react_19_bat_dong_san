@@ -1,11 +1,12 @@
-// backend/src/controllers/auth.controller.js
+// // backend/src/controllers/auth.controller.js
+
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-/** Ký access token */
-function signToken(userId) {
+/** Ký access token (thêm role vào payload) */
+function signToken(user) {
   return jwt.sign(
-    { sub: userId },
+    { sub: user._id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES || "1h" }
   );
@@ -14,21 +15,24 @@ function signToken(userId) {
 /** Đăng ký */
 async function register(req, res) {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, password, avatar = "", phone = "", address = "" } = req.body || {};
     if (!name || !email || !password) {
       return res.status(400).json({ message: "name, email, password are required" });
     }
 
-    // tạo user
-    const user = await User.create({ name, email, password });
-    const token = signToken(user._id);
+    // Luôn tạo với role mặc định 'user' (không cho client set role lúc đăng ký)
+    const user = await User.create({ name, email, password, avatar, phone, address, role: "user" });
 
+    const token = signToken(user);
     return res.status(201).json({
       token,
-      user: { _id: user._id, name: user.name, email: user.email }
+      user: {
+        _id: user._id, name: user.name, email: user.email,
+        avatar: user.avatar, phone: user.phone, address: user.address,
+        role: user.role,
+      }
     });
   } catch (err) {
-    // xử lý trùng email (E11000)
     if (err && err.code === 11000) {
       return res.status(409).json({ message: "Email đã tồn tại" });
     }
@@ -51,10 +55,14 @@ async function login(req, res) {
     const ok = await user.comparePassword(password);
     if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = signToken(user._id);
+    const token = signToken(user);
     return res.json({
       token,
-      user: { _id: user._id, name: user.name, email: user.email }
+      user: {
+        _id: user._id, name: user.name, email: user.email,
+        avatar: user.avatar, phone: user.phone, address: user.address,
+        role: user.role,
+      }
     });
   } catch (err) {
     console.error("[login] error:", err);

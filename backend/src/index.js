@@ -1,3 +1,4 @@
+// backend/src/index.js
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -10,15 +11,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Middlewares
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Routes prefix
+// ✨ CHỈ mount prefix /api, KHÔNG gắn auth ở đây
 app.use("/api", apiRoutes);
 
-// Start server
 (async () => {
   await connectDB(process.env.MONGODB_URI);
   app.listen(PORT, () => {

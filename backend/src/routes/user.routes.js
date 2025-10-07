@@ -1,22 +1,18 @@
 // backend/src/routes/user.routes.js
 
 const express = require("express");
-const User = require("../models/User");
+const { getMe, updateMe, listUsers, updateRole, deleteUser } = require("../controllers/user.controller");
+const { requireRole } = require("../middlewares/auth");
 
 const router = express.Router();
 
-// GET /api/users/me → trả thông tin user từ token
-router.get("/me", async (req, res) => {
-  // req.userId được set trong middleware auth
-  const me = await User.findById(req.userId).select("_id name email createdAt updatedAt");
-  if (!me) return res.status(404).json({ message: "User not found" });
-  res.json(me);
-});
+/** User tự xem/sửa hồ sơ */
+router.get("/me", getMe);
+router.put("/me", updateMe); // cập nhật name/avatar/phone/address
 
-// GET /api/users → list user (chỉ để test nhanh)
-router.get("/", async (_req, res) => {
-  const list = await User.find().select("_id name email createdAt");
-  res.json(list);
-});
+/** Admin quản lý người dùng */
+router.get("/", requireRole("admin"), listUsers);
+router.patch("/:id/role", requireRole("admin"), updateRole);
+router.delete("/:id", requireRole("admin"), deleteUser);
 
 module.exports = router;
