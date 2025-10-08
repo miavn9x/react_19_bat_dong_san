@@ -1,12 +1,8 @@
 // frontend/src/modules/suneditop/components/SunEditor.jsx
-// component SunEditor với một số tuỳ chỉnh
-// tham khảo: https://www.npmjs.com/package/suneditor-react
-
 import { useState } from "react";
 import SunEditor from "suneditor-react";
-import "suneditor/dist/css/suneditor.min.css"; // CSS bắt buộc
+import "suneditor/dist/css/suneditor.min.css";
 
-// Chỉ dùng nội bộ file (không export) để không phạm rule Fast Refresh
 const PARA_STYLE_CLASSES = ["__se__p-spaced", "__se__p-bordered", "__se__p-neon"];
 
 function normalizeParagraphStyles(html) {
@@ -17,9 +13,7 @@ function normalizeParagraphStyles(html) {
       const current = PARA_STYLE_CLASSES.filter((c) => el.classList.contains(c));
       if (current.length > 1) {
         const keep = current[current.length - 1];
-        PARA_STYLE_CLASSES.forEach((c) => {
-          if (c !== keep) el.classList.remove(c);
-        });
+        PARA_STYLE_CLASSES.forEach((c) => { if (c !== keep) el.classList.remove(c); });
       }
     });
     return doc.body.innerHTML;
@@ -28,20 +22,20 @@ function normalizeParagraphStyles(html) {
   }
 }
 
-// ✅ File này CHỈ export 1 React component
-export default function SunEditorComponent() {
-  const [content, setContent] = useState("");
+export default function SunEditorComponent({ value, onChange }) {
+  const [content, setContent] = useState(value || "");
 
   const handleChange = (val) => {
-    const raw = val || "";
-    const cleaned = normalizeParagraphStyles(raw);
-    if (cleaned !== content) setContent(cleaned);
+    const cleaned = normalizeParagraphStyles(val || "");
+    setContent(cleaned);
+    onChange?.(cleaned); // parent nhận HTML để gọi API
   };
 
   return (
     <main className="p-5">
       <SunEditor
         onChange={handleChange}
+        setContents={content}
         setOptions={{
           mode: "classic",
           stickyToolbar: 0,
@@ -51,17 +45,14 @@ export default function SunEditorComponent() {
           maxCharCount: 50000,
           defaultTag: "p",
           placeholder: "Nhập nội dung...",
-          defaultStyle: `
-            font-family: Inter, system-ui, Arial, sans-serif;
-            line-height: 1.8;
-          `,
+          defaultStyle: `font-family: Inter, system-ui, Arial, sans-serif; line-height: 1.8;`,
           paragraphStyles: [
             { name: "Spaced", class: "__se__p-spaced" },
             { name: "Bordered", class: "__se__p-bordered" },
             { name: "Neon", class: "__se__p-neon" },
           ],
 
-          // ====== BỔ SUNG CHO RADIO (AUDIO URL) ======
+          // Audio URL
           linkNoPrefix: true,
           linkProtocol: "https://",
           audioUrlInput: true,
@@ -70,42 +61,43 @@ export default function SunEditorComponent() {
           onAudioUpload: (target, state) => {
             if (state === "create" && target?.tagName === "AUDIO") {
               if (!target.hasAttribute("controls")) target.setAttribute("controls", "");
-              if (!target.hasAttribute("preload"))  target.setAttribute("preload", "none");
+              if (!target.hasAttribute("preload")) target.setAttribute("preload", "none");
             }
           },
-          onAudioUploadError: (msg) => {
-            alert(`Audio error: ${msg}`);
-            return false;
-          },
 
-          // Auto-embed SoundCloud; ZingMP3 thì chèn <a> mở tab mới
+          onAudioUploadError: (msg) => { alert(`Audio error: ${msg}`); return false; },
+
+          // Paste: auto-embed SoundCloud; ZingMP3 thì chèn link mở tab mới
           onPaste: (e, _cleanData, _maxChar, core) => {
             try {
               const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
+
               if (/^https?:\/\/(www\.)?soundcloud\.com\/.+/i.test(text)) {
                 e.preventDefault();
-                const iframe = `
+                core.insertHTML(`
                   <div class="se-audio-embed">
-                    <iframe
-                      width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay"
+                    <iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay"
                       src="https://w.soundcloud.com/player/?url=${encodeURIComponent(text)}&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&visual=false">
                     </iframe>
-                  </div>`;
-                core.insertHTML(iframe, true, true);
+                  </div>`, true, true);
                 return false;
               }
+
               if (/^https?:\/\/(www\.)?zingmp3\.vn\/bai-hat\/.+/i.test(text)) {
                 e.preventDefault();
-                const a = `<p><a href="${text}" rel="noopener noreferrer" target="_blank">${text}</a></p>`;
-                core.insertHTML(a, true, true);
+                core.insertHTML(
+                  `<p><a href="${text}" rel="noopener noreferrer" target="_blank">${text}</a></p>`,
+                  true, true
+                );
                 return false;
               }
-            } catch {
-              /* ignore paste errors */
+            } catch (_err) {
+              // Giữ khối catch không rỗng để qua rule no-empty
+              // Trên server (không có window) mới ném lỗi ra ngoài
+              if (typeof window === "undefined") { throw _err; }
             }
-            return true;
+            return true; // cho phép paste mặc định
           },
-          // ====== HẾT PHẦN BỔ SUNG ======
 
           imageResizing: true,
           imageRotation: true,
@@ -116,10 +108,7 @@ export default function SunEditorComponent() {
           videoAccept: ".mp4,.webm,.ogg",
           audioFileInput: true,
           audioAccept: ".mp3,.wav,.ogg",
-          linkRelDefault: {
-            default: "nofollow noopener noreferrer",
-            check_new_window: "only:noreferrer noopener",
-          },
+          linkRelDefault: { default: "nofollow noopener noreferrer", check_new_window: "only:noreferrer noopener" },
           linkTargetNewWindow: true,
           buttonList: [
             ["undo","redo","removeFormat","preview","print","fullScreen","showBlocks","codeView"],
@@ -129,12 +118,7 @@ export default function SunEditorComponent() {
           ],
         }}
       />
-
-      {/* KHÔNG render preview ở đây nữa.
-          Cần demo tạm thời thì mở comment:
-          <h2 className="mt-4">Kết quả:</h2>
-          <SunContentPreview html={content} className="border border-gray-300 rounded p-3 mt-2" />
-      */}
+      {/* Không render preview demo ở đây nữa */}
     </main>
   );
 }
