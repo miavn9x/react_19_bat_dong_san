@@ -1,5 +1,6 @@
  // frontend/src/layouts/AdminLayout.jsx
-
+// Layout dành cho admin (admin mới truy cập được)
+// Bao gồm sidebar, topbar, footer (tuỳ chọn)
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, Link, useNavigate, useLocation } from "react-router-dom";
 import { logout as doLogout, AUTH_EVENT } from "../modules/auth/services/auth";

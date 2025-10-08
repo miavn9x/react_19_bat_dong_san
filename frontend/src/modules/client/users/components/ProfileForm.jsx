@@ -1,3 +1,8 @@
+// frontend/src/modules/client/users/components/ProfileForm.jsx
+// form chỉnh sửa thông tin cá nhân (dùng trong trang Profile.jsx)
+// nhận props: me (thông tin user hiện tại), onSave (hàm lưu), saving (trạng thái đang lưu)
+// chỉ name, avatar, phone, address
+// hiện thị email (không cho sửa email)
 import { useState, useEffect } from "react";
 
 export default function ProfileForm({ me, onSave, saving = false }) {

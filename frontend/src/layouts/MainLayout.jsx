@@ -1,4 +1,7 @@
 // frontend/src/layouts/MainLayout.jsx
+// Layout chính cho phần client (khách và user đã đăng nhập)
+// Bao gồm header, footer, nav, mobile drawer
+//
 import { useEffect, useRef, useState } from "react";
 import {
   NavLink,
@@ -18,10 +21,10 @@ function NavItem({ to, end, children, onClick }) {
       onClick={onClick}
       className={({ isActive }) =>
         [
-          "relative px-3 py-2 text-sm font-medium rounded-md transition",
+          "relative px-4 py-2.5 text-sm font-medium rounded-md transition-colors duration-200",
           isActive
-            ? "text-indigo-700"
-            : "text-gray-700 hover:text-gray-900 hover:bg-gray-100",
+            ? "text-indigo-600 font-semibold"
+            : "text-gray-600 hover:text-indigo-600 hover:bg-gray-100/50",
         ].join(" ")
       }
     >
@@ -30,8 +33,8 @@ function NavItem({ to, end, children, onClick }) {
           <span>{children}</span>
           <span
             className={[
-              "pointer-events-none absolute -bottom-1 left-3 right-3 h-0.5 rounded",
-              isActive ? "bg-indigo-600" : "bg-transparent",
+              "absolute inset-x-4 bottom-0 h-0.5 bg-indigo-600 transition-transform duration-200",
+              isActive ? "scale-x-100" : "scale-x-0",
             ].join(" ")}
           />
         </>
@@ -56,19 +59,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const accountRef = useRef(null);
-  // const [q, setQ] = useState("");
-  // const handleSearch = (e) => {
-  //   e.preventDefault();
-  //   const term = q?.trim() || "";
-  //   if (!term) {
-  //     navigate("/search");
-  //   } else {
-  //     navigate(`/search?q=${encodeURIComponent(term)}`);
-  //   }
-  //   setDrawerOpen(false);
-  // };
 
-  // ⬇️ LẮNG NGHE SỰ KIỆN auth-changed ĐỂ ĐỒNG BỘ NGAY SAU LOGIN/LOGOUT
   useEffect(() => {
     const syncUser = () => {
       try {
@@ -82,7 +73,6 @@ export default function MainLayout() {
     return () => window.removeEventListener(AUTH_EVENT, syncUser);
   }, []);
 
-  // Shadow khi scroll
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -90,17 +80,14 @@ export default function MainLayout() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Đóng drawer & dropdown khi đổi route
   useEffect(() => {
     setDrawerOpen(false);
     setAccountOpen(false);
   }, [location.pathname]);
 
-  // Khoá scroll nền + ESC để đóng
   useEffect(() => {
     document.body.classList.toggle("overflow-hidden", drawerOpen);
-    const onKey = (e) =>
-      e.key === "Escape" && (setDrawerOpen(false), setAccountOpen(false));
+    const onKey = (e) => e.key === "Escape" && (setDrawerOpen(false), setAccountOpen(false));
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.classList.remove("overflow-hidden");
@@ -108,11 +95,9 @@ export default function MainLayout() {
     };
   }, [drawerOpen]);
 
-  // Click ra ngoài đóng dropdown tài khoản
   useEffect(() => {
     const onDocClick = (e) => {
-      if (!accountRef.current) return;
-      if (!accountRef.current.contains(e.target)) setAccountOpen(false);
+      if (accountRef.current && !accountRef.current.contains(e.target)) setAccountOpen(false);
     };
     document.addEventListener("click", onDocClick);
     return () => document.removeEventListener("click", onDocClick);
@@ -120,228 +105,98 @@ export default function MainLayout() {
 
   const handleLogout = () => {
     doLogout();
-    setUser(null); // local sync
+    setUser(null);
     navigate("/");
   };
 
-  const initial = (user?.name || user?.email || "?")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+  const initial = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
       <header
         className={[
-          "sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70",
-          scrolled ? "shadow-sm" : "",
+          " w-full border-b border-gray-200 bg-white/90 backdrop-blur-md",
+          scrolled ? "shadow-md" : "",
         ].join(" ")}
       >
-        <div className="mx-auto container px-4">
-          <div className="flex h-16 items-center justify-between">
-            {/* Brand */}
+        <div className="mx-auto container  py-2 px-2 sm:px-6 ">
+          {/* Top row: Logo + Actions */}
+          <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-indigo-600 grid place-items-center text-white font-bold">
+              <div className="h-8 w-8 rounded-md bg-indigo-600 text-white font-bold grid place-items-center">
                 BĐS
               </div>
-              <span className="md:hidden lg:inline text-lg md:text-xl font-extrabold text-gray-900 tracking-tight">
+              <span className="hidden sm:inline text-lg font-bold text-gray-900">
                 Bất Động Sản
               </span>
             </Link>
 
-            {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              <NavItem to="/" end>
-                Trang chủ
-              </NavItem>
-              <NavItem to="/gioi-thieu">Giới thiệu</NavItem>
-              <NavItem to="/ban-tin">Bản tin</NavItem>
-              <NavItem to="/bat-dong-san">Bất động sản</NavItem>
-              <NavItem to="/lien-he">Liên hệ</NavItem>
-              {/* <NavItem to="/test">Test SunEditor</NavItem> */}
-
-              {/* Search (center) */}
-              {/* <form onSubmit={handleSearch} className="mx-auto ">
-              <div className="relative">
-                <input
-                  type="search"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Tìm kiếm (users, posts, ...)"
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-9 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500"
-                />
-                <span className="absolute inset-y-0 left-2 grid place-items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                      d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z" />
-                  </svg>
-                </span>
-              </div>
-            </form> */}
-            </nav>
-
-            {/* Actions desktop & mobile */}
-            <div className="flex items-center gap-2">
-              {/* Desktop CTA */}
+            <div className="flex items-center gap-4">
               <Link
                 to="/dashboard"
-                className="hidden md:inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-medium text-white shadow hover:bg-indigo-700 transition"
+                className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-500 transition-colors shadow-sm"
               >
                 Đăng tin
               </Link>
 
-              {/* Account dropdown */}
-              <div className="relative" ref={accountRef}>
+              {/* Account */}
+              <div className="relative " ref={accountRef}>
                 <button
                   aria-label="Tài khoản"
-                  className="inline-flex mt-0 items-center gap-2 rounded-full border px-3 py-1 bg-white hover:bg-gray-50"
-                  onClick={() => setAccountOpen((v) => !v)}
+                  className="flex items-center gap-2 rounded-full  border border-gray-200 px-3 py-1 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  onClick={() => setAccountOpen(!accountOpen)}
                 >
-                  {/* Bubble: ưu tiên avatar nếu BE có, không thì ký tự đầu */}
-                  <div className="h-8 w-8 flex-shrink-0 rounded-full grid place-items-center bg-gray-100 text-gray-700 font-semibold overflow-hidden">
+                  <div className="h-7 w-7 rounded-full bg-gray-100 text-gray-600 font-medium grid place-items-center overflow-hidden">
                     {user?.avatar ? (
-                      <img
-                        src={user.avatar}
-                        alt="avatar"
-                        className="h-full w-full object-cover"
-                      />
+                      <img src={user.avatar} alt="avatar" className="h-full w-full object-cover" />
                     ) : user ? (
                       initial
                     ) : (
-                      // icon user
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
-                        />
-                        <path
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4.5 19.5a7.5 7.5 0 0115 0"
-                        />
-                      </svg>
+<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5a7.5 7.5 0 0115 0" />
+</svg>
                     )}
                   </div>
-
-                  {/* Tên (desktop) */}
-                  {user && (
-                    <span className="hidden sm:block text-sm font-medium text-gray-900 max-w-[160px] truncate">
-                      {user.name || user.email}
-                    </span>
-                  )}
-
-                  {/* Chevron */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4 flex-shrink-0 text-gray-500"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.085l3.71-3.854a.75.75 0 111.08 1.04l-4.24 4.4a.75.75 0 01-1.08 0l-4.24-4.4a.75.75 0 01.02-1.06z" />
+                  {user && <span className="hidden sm:block text-sm font-medium text-indigo-700 truncate max-w-[140px]">{user.name || user.email}</span>}
+                  <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
-                {/* Dropdown */}
                 <div
                   className={[
-                    "absolute right-0 mt-0 min-w-full rounded-xl border bg-white shadow-lg transition origin-top-right z-[999]",
-                    accountOpen
-                      ? "opacity-100 scale-100"
-                      : "opacity-0 scale-95 pointer-events-none",
+                    "absolute right-0 mt-[0.20px]  w-48 rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-150 origin-top-right z-50",
+                    accountOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
                   ].join(" ")}
                 >
                   {!user ? (
-                    <div className="p-1">
-                      <Link
-                        to="/register"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M15 14c2.761 0 5 2.239 5 5M9 14c-2.761 0-5 2.239-5 5m8-13a4 4 0 110 8 4 4 0 010-8zm7 3h3m-1.5-1.5V10.5"
-                          />
+                    <div >
+                      <Link to="/register" className=" px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M18 9V3.6c0-.56 0-.84-.109-1.054a1 1 0 00-.437-.437C17.24 2 16.96 2 16.4 2H7.6c-.56 0-.84 0-1.054.109a1 1 0 00-.437.437C6 2.76 6 3.04 6 3.6V9m6 3v9m-3-9h6c.828 0 1.5.895 1.5 2v7c0 1.105-.672 2-1.5 2H9c-.828 0-1.5-.895-1.5-2v-7c0-1.105.672-2 1.5-2z" />
                         </svg>
                         Đăng ký
                       </Link>
-                      <Link
-                        to="/login"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M15 3h4a2 2 0 012 2v4m-6 12h4a2 2 0 002-2v-4M10 17l5-5-5-5m5 5H3"
-                          />
+                      <Link to="/login" className=" px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
                         Đăng nhập
                       </Link>
                     </div>
                   ) : (
-                    <div className="p-1">
-                      <Link
-                        to="/profile"
-                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-                          />
+                    <div >
+                      <Link to="/profile" className=" px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         Thông tin
                       </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 whitespace-nowrap"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1"
-                          />
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1" />
                         </svg>
                         Đăng xuất
                       </button>
@@ -350,192 +205,119 @@ export default function MainLayout() {
                 </div>
               </div>
 
-              {/* Hamburger (mobile) */}
+              {/* Mobile menu button */}
               <button
                 aria-label="Mở menu"
-                aria-expanded={drawerOpen}
-                aria-controls="mobile-drawer"
-                className="md:hidden inline-flex items-center rounded-md border px-3 py-2 text-sm bg-white hover:bg-gray-50"
+                className="md:hidden flex items-center px-3 py-1 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
                 onClick={() => setDrawerOpen(true)}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
+                <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
             </div>
           </div>
+
+          {/* Nav row */}
+          <nav className="hidden md:flex justify-center">
+            <NavItem to="/" end>Trang chủ</NavItem>
+            <NavItem to="/gioi-thieu">Giới thiệu</NavItem>
+            <NavItem to="/ban-tin">Bản tin</NavItem>
+            <NavItem to="/bat-dong-san">Bất động sản</NavItem>
+            <NavItem to="/lien-he">Liên hệ</NavItem>
+            <NavItem to="/test">Tìm kiếm</NavItem>
+          </nav>
         </div>
       </header>
 
-      {/* Overlay (mobile) */}
+      {/* Mobile overlay */}
       <div
         className={[
-          "fixed inset-0 z-40 bg-black/40 transition-opacity md:hidden",
-          drawerOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none",
+          "fixed inset-0 bg-black/30 transition-opacity duration-200 md:hidden z-40",
+          drawerOpen ? "opacity-100" : "opacity-0 pointer-events-none",
         ].join(" ")}
         onClick={() => setDrawerOpen(false)}
       />
 
-      {/* Drawer (mobile) */}
+      {/* Mobile drawer */}
       <aside
-        id="mobile-drawer"
         className={[
-          "fixed inset-y-0 left-0 z-50 w-72 bg-white border-r shadow-xl md:hidden",
-          "transform transition-transform duration-300 ease-out",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r shadow-xl transform transition-transform duration-300 ease-in-out md:hidden",
           drawerOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
-        role="dialog"
-        aria-modal="true"
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600 grid place-items-center text-white font-bold">
-              BĐS
-            </div>
-            <span className="font-bold">Menu</span>
-          </div>
-          <button
-            aria-label="Đóng menu"
-            className="inline-flex items-center rounded-md border px-3 py-2 text-sm bg-white hover:bg-gray-50"
-            onClick={() => setDrawerOpen(false)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 
-                1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 
-                1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 
-                10 4.293 5.707a1 1 0 010-1.414z"
-              />
+        <div className="flex items-center justify-between p-4 border-b">
+          <span className="font-bold text-gray-900">Menu</span>
+          <button aria-label="Đóng menu" onClick={() => setDrawerOpen(false)} className="p-2 hover:bg-gray-100 rounded-md">
+            <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-
-        <nav className="px-2 py-3 flex flex-col gap-1">
-          <NavItem to="/" end onClick={() => setDrawerOpen(false)}>
-            Trang chủ
-          </NavItem>
-          <NavItem to="/gioi-thieu" onClick={() => setDrawerOpen(false)}>
-            Giới thiệu
-          </NavItem>
-          <NavItem to="/ban-tin" onClick={() => setDrawerOpen(false)}>
-            Bản tin
-          </NavItem>
-          <NavItem to="/bat-dong-san" onClick={() => setDrawerOpen(false)}>
-            Bất động sản
-          </NavItem>
-          <div className="my-2 h-px bg-gray-200" />
+        <nav className="flex flex-col p-4 space-y-2">
+          <NavItem to="/" end onClick={() => setDrawerOpen(false)}>Trang chủ</NavItem>
+          <NavItem to="/gioi-thieu" onClick={() => setDrawerOpen(false)}>Giới thiệu</NavItem>
+          <NavItem to="/ban-tin" onClick={() => setDrawerOpen(false)}>Bản tin</NavItem>
+          <NavItem to="/bat-dong-san" onClick={() => setDrawerOpen(false)}>Bất động sản</NavItem>
+          <NavItem to="/lien-he" onClick={() => setDrawerOpen(false)}>Liên hệ</NavItem>
+          <hr className="my-2 border-gray-200" />
           {!user ? (
             <>
-              <Link
-                to="/register"
-                onClick={() => setDrawerOpen(false)}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Đăng ký
-              </Link>
-              <Link
-                to="/login"
-                onClick={() => setDrawerOpen(false)}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Đăng nhập
-              </Link>
+              <Link to="/register" onClick={() => setDrawerOpen(false)} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">Đăng ký</Link>
+              <Link to="/login" onClick={() => setDrawerOpen(false)} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">Đăng nhập</Link>
             </>
           ) : (
             <>
-              <Link
-                to="/profile"
-                onClick={() => setDrawerOpen(false)}
-                className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Thông tin
-              </Link>
-              <button
-                onClick={() => {
-                  setDrawerOpen(false);
-                  handleLogout();
-                }}
-                className="px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 text-left"
-              >
-                Đăng xuất
-              </button>
+              <Link to="/profile" onClick={() => setDrawerOpen(false)} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md">Thông tin</Link>
+              <button onClick={() => { setDrawerOpen(false); handleLogout(); }} className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md text-left">Đăng xuất</button>
             </>
           )}
         </nav>
       </aside>
 
-      {/* Content */}
+      {/* Main content */}
       <main className="flex-1">
-        <div className="mx-auto container px-4 py-8">
+        <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
           <Outlet />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white">
-        <div className="mx-auto container px-4 py-10 grid gap-8 md:grid-cols-3">
+      <footer className="border-t bg-gray-50">
+        <div className="mx-auto container px-4 py-10 sm:px-6 lg:px-8 grid gap-8 md:grid-cols-3">
           <div>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-indigo-600 grid place-items-center text-white font-bold">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-md bg-indigo-600 text-white font-bold grid place-items-center">
                 BĐS
               </div>
-              <span className="text-lg font-extrabold text-gray-900">
-                Bất Động Sản
-              </span>
+              <span className="text-lg font-bold text-gray-900">Bất Động Sản</span>
             </div>
-            <p className="mt-3 text-sm text-gray-600">
-              Nền tảng thông tin & đăng tin bất động sản. Cập nhật nhanh – Trải
-              nghiệm mượt.
-            </p>
+            <p className="text-sm text-gray-600">Nền tảng thông tin & đăng tin bất động sản. Cập nhật nhanh – Trải nghiệm mượt mà.</p>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-gray-900">Điều hướng</h4>
-            <ul className="mt-3 space-y-2 text-sm text-gray-600">
-              <li>
-                <Link className="hover:text-gray-900" to="/gioi-thieu">
-                  Giới thiệu
-                </Link>
-              </li>
-              <li>
-                <Link className="hover:text-gray-900" to="/ban-tin">
-                  Bản tin
-                </Link>
-              </li>
-              <li>
-                <Link className="hover:text-gray-900" to="/bat-dong-san">
-                  Bất động sản
-                </Link>
-              </li>
-              <li>
-                <Link className="hover:text-gray-900" to="/dashboard">
-                  Bảng điều khiển
-                </Link>
-              </li>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">Điều hướng</h4>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li><Link to="/gioi-thieu" className="hover:text-indigo-600 transition-colors">Giới thiệu</Link></li>
+              <li><Link to="/ban-tin" className="hover:text-indigo-600 transition-colors">Bản tin</Link></li>
+              <li><Link to="/bat-dong-san" className="hover:text-indigo-600 transition-colors">Bất động sản</Link></li>
+              <li><Link to="/dashboard" className="hover:text-indigo-600 transition-colors">Bảng điều khiển</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-gray-900">Liên hệ</h4>
-            <ul className="mt-3 space-y-2 text-sm text-gray-600">
-              <li>Email: support@example.com</li>
-              <li>Hotline: 0900 000 000</li>
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">Liên hệ</h4>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li className="flex items-center gap-2">
+                <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Email: support@example.com
+              </li>
+              <li className="flex items-center gap-2">
+                <svg className="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                Hotline: 0900 000 000
+              </li>
               <li>© {new Date().getFullYear()} All rights reserved.</li>
             </ul>
           </div>

@@ -1,3 +1,6 @@
+// frontend/src/modules/admin/users/components/UserTable.jsx
+//danh sách user (dùng trong admin)
+// nhận props: rows (dữ liệu user), onChangeRole (hàm đổi role), onDelete (hàm xoá user)
 export default function UserTable({ rows = [], onChangeRole, onDelete }) {
   return (
     <>

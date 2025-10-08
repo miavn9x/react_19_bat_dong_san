@@ -127,8 +127,8 @@ const router = createBrowserRouter([
       { path: "test", element: <SunEditorComponent /> },
 
       // hồ sơ (chỉ khi đăng nhập)
-      { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },
-      { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },
+      { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },//lấy thông tin user hiện thi
+      { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },// thay đổi thông tin user theo id
 
       // Auth (public)
       { path: "login", element: <Login /> },

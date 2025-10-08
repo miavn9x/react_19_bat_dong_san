@@ -1,4 +1,6 @@
-// src/modules/auth/pages/Register.jsx
+// frontend/src/modules/auth/pages/register.jsx
+// trang đăng ký
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth"; // ✅ sửa path
