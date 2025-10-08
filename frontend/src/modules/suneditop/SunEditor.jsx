@@ -2,7 +2,7 @@ import { useState } from "react";
 import SunEditor from "suneditor-react";
 import "suneditor/dist/css/suneditor.min.css"; // CSS bắt buộc
 
-export default function App() {
+export default function SunEditorComponent() {
   const [content, setContent] = useState("");
 
   const handleChange = (val) => {
@@ -12,7 +12,6 @@ export default function App() {
 
   return (
     <main style={{ padding: 20 }}>
-      <h1>Demo SunEditor trong React</h1>
       <SunEditor
         height="300px"
         setOptions={{

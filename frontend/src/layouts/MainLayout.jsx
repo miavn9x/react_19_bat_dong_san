@@ -47,6 +47,17 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const accountRef = useRef(null);
+  // const [q, setQ] = useState("");
+  // const handleSearch = (e) => {
+  //   e.preventDefault();
+  //   const term = q?.trim() || "";
+  //   if (!term) {
+  //     navigate("/search");
+  //   } else {
+  //     navigate(`/search?q=${encodeURIComponent(term)}`);
+  //   }
+  //   setDrawerOpen(false);
+  // };
 
   // ⬇️ LẮNG NGHE SỰ KIỆN auth-changed ĐỂ ĐỒNG BỘ NGAY SAU LOGIN/LOGOUT
   useEffect(() => {
@@ -114,12 +125,12 @@ export default function MainLayout() {
           scrolled ? "shadow-sm" : "",
         ].join(" ")}
       >
-        <div className="mx-auto max-w-7xl px-4">
+        <div className="mx-auto container px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Brand */}
             <Link to="/" className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-indigo-600 grid place-items-center text-white font-bold">BĐS</div>
-              <span className="text-lg md:text-xl font-extrabold text-gray-900 tracking-tight">Bất Động Sản</span>
+              <span className="md:hidden lg:inline text-lg md:text-xl font-extrabold text-gray-900 tracking-tight">Bất Động Sản</span>
             </Link>
 
             {/* Desktop Nav */}
@@ -128,6 +139,27 @@ export default function MainLayout() {
               <NavItem to="/gioi-thieu">Giới thiệu</NavItem>
               <NavItem to="/ban-tin">Bản tin</NavItem>
               <NavItem to="/bat-dong-san">Bất động sản</NavItem>
+              <NavItem to="/lien-he">Liên hệ</NavItem>
+              {/* <NavItem to="/test">Test SunEditor</NavItem> */}
+
+                        {/* Search (center) */}
+            {/* <form onSubmit={handleSearch} className="mx-auto ">
+              <div className="relative">
+                <input
+                  type="search"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Tìm kiếm (users, posts, ...)"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pl-9 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="absolute inset-y-0 left-2 grid place-items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z" />
+                  </svg>
+                </span>
+              </div>
+            </form> */}
             </nav>
 
             {/* Actions desktop & mobile */}
@@ -144,7 +176,7 @@ export default function MainLayout() {
               <div className="relative" ref={accountRef}>
                 <button
                   aria-label="Tài khoản"
-                  className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 bg-white hover:bg-gray-50"
+                  className="inline-flex items-center gap-3 rounded-full border px-2 py-[1px] bg-white hover:bg-gray-50"
                   onClick={() => setAccountOpen((v) => !v)}
                 >
                   {/* Bubble: ưu tiên avatar nếu BE có, không thì ký tự đầu */}
@@ -180,8 +212,8 @@ export default function MainLayout() {
 
                 {/* Dropdown */}
                 <div
-                  className={[
-                    "absolute right-0 mt-2 w-56 rounded-xl border bg-white shadow-lg transition origin-top-right",
+              className={[
+                    "absolute right-0 mt-[0.5px] w-42 rounded-xl border bg-white shadow-lg transition origin-top-right z-999",
                     accountOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
                   ].join(" ")}
                 >
@@ -206,7 +238,7 @@ export default function MainLayout() {
                     </div>
                   ) : (
                     <div className="p-1">
-                      <Link to="/dashboard" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link to="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4"
                           viewBox="0 0 24 24" fill="none" stroke="currentColor">
                           <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -305,7 +337,7 @@ export default function MainLayout() {
             </>
           ) : (
             <>
-              <Link to="/dashboard" onClick={() => setDrawerOpen(false)}
+              <Link to="/profile" onClick={() => setDrawerOpen(false)}
                 className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100">
                 Thông tin
               </Link>
@@ -322,14 +354,14 @@ export default function MainLayout() {
 
       {/* Content */}
       <main className="flex-1">
-        <div className="mx-auto max-w-7xl px-4 py-8">
+        <div className="mx-auto container px-4 py-8">
           <Outlet />
         </div>
       </main>
 
       {/* Footer */}
       <footer className="border-t bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-10 grid gap-8 md:grid-cols-3">
+        <div className="mx-auto container px-4 py-10 grid gap-8 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-indigo-600 grid place-items-center text-white font-bold">BĐS</div>
