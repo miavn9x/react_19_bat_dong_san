@@ -1,4 +1,3 @@
-// // // src/App.jsx
 
 // import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 
@@ -20,12 +19,18 @@
 // // Guards
 // import PrivateRoute from "./guards/PrivateRoute";
 // import RoleRoute from "./guards/RoleRoute";
-// import SunEditorComponent from "./modules/suneditop/SunEditor";
+
+// // Extra (editor, profile)
+// import SunEditorComponent from "./modules/suneditop/SunEditor"; // giữ đúng tên thư mục bạn đang dùng
 // import Profile from "./modules/client/users/pages/Profile";
 // import UserPublic from "./modules/client/users/pages/UserPublic";
 // import UsersList from "./modules/admin/users/pages/UsersList";
 
+// // (Tùy bạn đã làm trang quản trị người dùng)
+// // import UsersList from "./modules/admin/users/pages/UsersList";
+
 // const router = createBrowserRouter([
+//   // --------- KHU CLIENT ----------
 //   {
 //     path: "/",
 //     element: <MainLayout />,
@@ -34,16 +39,19 @@
 //       { path: "gioi-thieu", element: <GioiThieu /> },
 //       { path: "ban-tin", element: <BanTin /> },
 //       { path: "bat-dong-san", element: <BatDongSan /> },
-//             { path: "test", element: <SunEditorComponent /> },
-//             { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },
-//     { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },
 
+//       // demo editor / tính năng bổ sung
+//       { path: "test", element: <SunEditorComponent /> },
+
+//       // hồ sơ (chỉ khi đăng nhập)
+//       { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },//lấy thông tin user hiện thi
+//       { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },// thay đôi thông tin user theo id
 
 //       // Auth (public)
 //       { path: "login", element: <Login /> },
 //       { path: "register", element: <Register /> },
 
-//       // Private (client)
+//       // Dashboard client (cần đăng nhập)
 //       {
 //         path: "dashboard",
 //         element: (
@@ -55,7 +63,7 @@
 //     ],
 //   },
 
-//   // ADMIN
+//   // --------- KHU ADMIN ----------
 //   {
 //     path: "/admin",
 //     element: (
@@ -66,22 +74,27 @@
 //       </PrivateRoute>
 //     ),
 //     children: [
-//       { index: true, element: <Dashboard /> }, // hoặc AdminDashboard riêng
-//       { path: "users", element: <div><UsersList />👥 Users Management</div> },
+//       // index của admin — bạn có thể thay bằng trang AdminDashboard riêng
+//       { index: true, element: <Dashboard /> },
+
+//       // Quản lý người dùng (nếu đã có UsersList thì dùng component đó)
+//       // { path: "users", element: <UsersList /> },
+//       { path: "users", element: <div><UsersList /></div> },
+
+//       // Các mục khác
 //       { path: "posts", element: <div>📰 Posts Management</div> },
 //       { path: "settings", element: <div>⚙️ Settings</div> },
 //       { path: "search", element: <div>🔎 Kết quả tìm kiếm</div> },
 //     ],
 //   },
 
-//   // Fallback
+//   // --------- Fallback ----------
 //   { path: "*", element: <Navigate to="/" replace /> },
 // ]);
 
 // export default function App() {
 //   return <RouterProvider router={router} />;
 // }
-// src/App.jsx
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 
 // Layouts
@@ -103,14 +116,16 @@ import Register from "./modules/auth/pages/register";
 import PrivateRoute from "./guards/PrivateRoute";
 import RoleRoute from "./guards/RoleRoute";
 
-// Extra (editor, profile)
-import SunEditorComponent from "./modules/suneditop/SunEditor"; // giữ đúng tên thư mục bạn đang dùng
+// Extra
+import SunEditorComponent from "./modules/suneditop/SunEditor";
 import Profile from "./modules/client/users/pages/Profile";
 import UserPublic from "./modules/client/users/pages/UserPublic";
 import UsersList from "./modules/admin/users/pages/UsersList";
 
-// (Tùy bạn đã làm trang quản trị người dùng)
-// import UsersList from "./modules/admin/users/pages/UsersList";
+// ⬇️⬇️ THÊM 3 TRANG UPLOAD
+import AdminUploadsPage from "./modules/admin/upload/pages/AdminUploadsPage";
+import PublicGalleryPage from "./modules/admin/upload/pages/PublicGalleryPage";
+import UserUploadTestPage from "./modules/admin/upload/pages/UserUploadTestPage";
 
 const router = createBrowserRouter([
   // --------- KHU CLIENT ----------
@@ -123,12 +138,12 @@ const router = createBrowserRouter([
       { path: "ban-tin", element: <BanTin /> },
       { path: "bat-dong-san", element: <BatDongSan /> },
 
-      // demo editor / tính năng bổ sung
+      // demo editor
       { path: "test", element: <SunEditorComponent /> },
 
       // hồ sơ (chỉ khi đăng nhập)
-      { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },//lấy thông tin user hiện thi
-      { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },// thay đôi thông tin user theo id
+      { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },
+      { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },
 
       // Auth (public)
       { path: "login", element: <Login /> },
@@ -140,6 +155,20 @@ const router = createBrowserRouter([
         element: (
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        ),
+      },
+
+      // ⬇️⬇️ TRANG TEST UPLOAD Ở KHU CLIENT
+      // (#2) Gallery: xem ảnh/video/mp3 — KHÔNG cần đăng nhập (nếu chỉ dán URL tĩnh) và có chế độ có đăng nhập
+      { path: "gallery", element: <PublicGalleryPage /> },
+
+      // (#3) Test upload cho user — CẦN đăng nhập
+      {
+        path: "upload/test",
+        element: (
+          <PrivateRoute>
+            <UserUploadTestPage />
           </PrivateRoute>
         ),
       },
@@ -157,14 +186,13 @@ const router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      // index của admin — bạn có thể thay bằng trang AdminDashboard riêng
       { index: true, element: <Dashboard /> },
 
-      // Quản lý người dùng (nếu đã có UsersList thì dùng component đó)
-      // { path: "users", element: <UsersList /> },
       { path: "users", element: <div><UsersList /></div> },
 
-      // Các mục khác
+      // ⬇️⬇️ (#1) Trang quản lý uploads cho admin (CRUD đầy đủ)
+      { path: "uploads", element: <AdminUploadsPage /> },
+
       { path: "posts", element: <div>📰 Posts Management</div> },
       { path: "settings", element: <div>⚙️ Settings</div> },
       { path: "search", element: <div>🔎 Kết quả tìm kiếm</div> },

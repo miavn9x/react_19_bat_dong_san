@@ -1,20 +1,5 @@
 // // // src/guards/RoleRoute.jsx
-
-// import { Navigate } from "react-router-dom";
-
-// export default function RoleRoute({ allow = [], children }) {
-//   let user = null;
-//   try {
-//     const raw = localStorage.getItem("user");
-//     user = raw ? JSON.parse(raw) : null;
-//   } catch {
-//     user = null;
-//   }
-
-//   if (!user) return <Navigate to="/login" replace />;
-//   if (!allow.includes(user.role)) return <Navigate to="/" replace />;
-//   return children;
-// }
+// guard route theo role (dùng trong khu admin)
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { getMe } from "../modules/auth/services/auth";

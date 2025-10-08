@@ -6,6 +6,7 @@ backend/
 │  │                             # - connect MongoDB
 │  │                             # - mount prefix /api -> routes.js
 │  │                             # - listen PORT
+│  │                             # + phục vụ static thư mục /uploads (express.static) để FE truy cập file đã upload
 │  ├─ config/
 │  │  └─ db.js                  # Kết nối Mongoose (connectDB), set strictQuery, log & thoát khi lỗi.
 │  ├─ middlewares/
@@ -17,6 +18,7 @@ backend/
 │  │                             # - router.use('/auth', modules/auth)
 │  │                             # - router.use('/users', modules/users)
 │  │                             # -> gom toàn bộ route từ các module theo prefix chuẩn REST.
+│  │                             # + router.use('/uploads', modules/uploads)  # mount API upload (images/videos/audios)
 │  ├─ modules/
 │  │  ├─ auth/
 │  │  │  ├─ controllers/
@@ -67,3 +69,22 @@ backend/
 └─ .env                         # Biến môi trường:
                                 # - PORT, MONGODB_URI, JWT_SECRET, JWT_EXPIRES
                                 # - CORS_ORIGIN (frontend origin)
+
+# BỔ SUNG (KHÔNG THAY ĐỔI GỐC)
+│  ├─ modules/
+│  │  └─ uploads/               # MODULE MỚI: quản lý upload lưu trực tiếp trên máy chủ
+│  │     ├─ controllers/
+│  │     │  └─ upload.controller.js  # Controller HTTP: CREATE (user); LIST/GET/PATCH/PUT/DELETE (admin). Xoá file vật lý khi replace/remove.
+│  │     ├─ models/
+│  │     │  └─ file.model.js         # Mongoose Model "File" (collection: "uploads"): owner, bucket, type, size, relPath, url, year/month/day, label.
+│  │     ├─ routes/
+│  │     │  └─ upload.routes.js      # Định tuyến + Multer: lưu vào uploads/<bucket>/<YYYY>/<MM>/<DD>/; phân quyền auth/requireRole.
+│  │     ├─ services/
+│  │     │  └─ storage.service.js    # Tạo cây thư mục ngày-tháng-năm + sinh tên file an toàn (timestamp + nanoid) + trả URL/relPath.
+│  │     ├─ validators/
+│  │     │  └─ upload.validator.js   # assertBucket(images|videos|audios), whitelist MIME theo từng bucket.
+│  │     └─ index.js                 # Export gọn: module.exports = { routes, models: { File } }
+│  └─ uploads/                       # THƯ MỤC LƯU FILE (được serve tĩnh). Tự tạo khi upload:
+│        ├─ images/ YYYY/MM/DD/...
+│        ├─ videos/ YYYY/MM/DD/...
+│        └─ audios/ YYYY/MM/DD/...

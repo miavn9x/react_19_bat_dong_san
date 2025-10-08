@@ -56,3 +56,21 @@ frontend/
 │  ├─ assets/
 │  └─ styles/
 └─ .env                              # VITE_API_URL=...
+
+bổ sung src/upload/ dung up ảnh ...
+├─ services/
+│  └─ uploads.api.js
+├─ hooks/
+│  ├─ useAuthToken.js
+│  ├─ useUploads.js
+│  └─ useUploadFile.js
+├─ components/
+│  ├─ MediaViewer.jsx
+│  ├─ UploadDropzone.jsx
+│  ├─ FileCard.jsx
+│  ├─ FiltersBar.jsx
+│  └─ AdminActions.jsx
+└─ pages/
+   ├─ AdminUploadsPage.jsx        // (#1) Quản lý (CRUD) – tái sử dụng
+   ├─ PublicGalleryPage.jsx       // (#2) Xem media: không login & có login
+   └─ UserUploadTestPage.jsx      // (#3) Test upload cho user – tái sử dụng
