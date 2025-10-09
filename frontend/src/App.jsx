@@ -1,3 +1,4 @@
+// src/App.jsx
 import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 
 // Layouts
@@ -5,7 +6,7 @@ import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
 // Client pages
-import Home from "./modules/client/home/Home";
+import Home from "./modules/client/Home/Home";
 import GioiThieu from "./modules/client/about/GioiThieu";
 import BanTin from "./modules/client/post/BanTin";
 import BatDongSan from "./modules/client/BatDongSan/BatDongSan";
@@ -19,19 +20,22 @@ import Register from "./modules/auth/pages/register";
 import PrivateRoute from "./guards/PrivateRoute";
 import RoleRoute from "./guards/RoleRoute";
 
-// Extra
+// (giữ trang editor/test cũ nếu bạn dùng)
 import SunEditorComponent from "./modules/suneditop/SunEditor";
+
+// Profile & Users
 import Profile from "./modules/client/users/pages/Profile";
 import UserPublic from "./modules/client/users/pages/UserPublic";
 import UsersList from "./modules/admin/users/pages/UsersList";
+import AdminUploadManager from "./modules/admin/upload/pages/AdminUploadManager";
+import UploadPlayground from "./modules/admin/upload/pages/test/UploadPlayground";
+import UserUploadManager from "./modules/admin/upload/pages/UserUploadManager";
+import PublicBrowseAll from "./modules/admin/upload/pages/test/PublicBrowseAll";
 
-// ⬇️⬇️ THÊM 3 TRANG UPLOAD
-import AdminUploadsPage from "./modules/admin/upload/pages/AdminUploadsPage";
-import PublicGalleryPage from "./modules/admin/upload/pages/PublicGalleryPage";
-import UserUploadTestPage from "./modules/admin/upload/pages/UserUploadTestPage";
+// 🔥 Upload pages mới (đã refactor chuẩn)
+
 
 const router = createBrowserRouter([
-  // --------- KHU CLIENT ----------
   {
     path: "/",
     element: <MainLayout />,
@@ -41,18 +45,19 @@ const router = createBrowserRouter([
       { path: "ban-tin", element: <BanTin /> },
       { path: "bat-dong-san", element: <BatDongSan /> },
 
-      // demo editor
+      // Test editor cũ
       { path: "test", element: <SunEditorComponent /> },
 
-      // hồ sơ (chỉ khi đăng nhập)
+      // User profile
       { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> },
       { path: "users/:id", element: <PrivateRoute><UserPublic /></PrivateRoute> },
 
       // Auth (public)
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
+{ path: "upload/public", element: <PublicBrowseAll /> },
 
-      // Dashboard client (cần đăng nhập)
+      // Private (client)
       {
         path: "dashboard",
         element: (
@@ -62,23 +67,29 @@ const router = createBrowserRouter([
         ),
       },
 
-      // ⬇️⬇️ TRANG TEST UPLOAD Ở KHU CLIENT
-      // (#2) Gallery: xem ảnh/video/mp3 — KHÔNG cần đăng nhập (nếu chỉ dán URL tĩnh) và có chế độ có đăng nhập
-      { path: "gallery", element: <PublicGalleryPage /> },
+      // 🔥 User upload manager (đã login)
+      {
+        path: "upload/user",
+        element: (
+          <PrivateRoute>
+            <UserUploadManager />
+          </PrivateRoute>
+        ),
+      },
 
-      // (#3) Test upload cho user — CẦN đăng nhập
+      // 🔥 Upload playground (test nhanh cho user/admin đều được – yêu cầu login)
       {
         path: "upload/test",
         element: (
           <PrivateRoute>
-            <UserUploadTestPage />
+            <UploadPlayground />
           </PrivateRoute>
         ),
       },
     ],
   },
 
-  // --------- KHU ADMIN ----------
+  // ADMIN
   {
     path: "/admin",
     element: (
@@ -89,20 +100,18 @@ const router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      { index: true, element: <Dashboard /> },
-
-      { path: "users", element: <div><UsersList /></div> },
-
-      // ⬇️⬇️ (#1) Trang quản lý uploads cho admin (CRUD đầy đủ)
-      { path: "uploads", element: <AdminUploadsPage /> },
-
+      { index: true, element: <Dashboard /> }, // hoặc AdminDashboard riêng
+      { path: "users", element: <div><UsersList />👥 Users Management</div> },
       { path: "posts", element: <div>📰 Posts Management</div> },
       { path: "settings", element: <div>⚙️ Settings</div> },
       { path: "search", element: <div>🔎 Kết quả tìm kiếm</div> },
+
+      // 🔥 Admin upload manager (CRUD đầy đủ)
+      { path: "uploads", element: <AdminUploadManager /> },
     ],
   },
 
-  // --------- Fallback ----------
+  // Fallback
   { path: "*", element: <Navigate to="/" replace /> },
 ]);
 

@@ -2,23 +2,28 @@
 const express = require("express");
 const router = express.Router();
 
-// health
+// Health check
 router.get("/health", (req, res) =>
   res.json({ status: "ok", time: new Date().toISOString() })
 );
 
-// modules
+// Modules
 const authModule = require("./modules/auth");
 const usersModule = require("./modules/users");
-const uploadsModule = require("./modules/uploads"); // ⬅️ thêm
+const uploadsModule = require("./modules/uploads");
 
 // PUBLIC
 router.use("/auth", authModule.routes);
 
-// UPLOADS (tách biệt images/videos/audios, CRUD đầy đủ)
-router.use("/uploads", uploadsModule.routes); // ⬅️ mount /api/uploads/...
+// UPLOADS (images/videos/audios)
+// - Public: GET list/detail
+// - User/Admin: POST upload (single/multi)
+// - Admin: PATCH/PUT/DELETE
+router.use("/uploads", uploadsModule.routes);
 
-// USERS (middleware auth đã gắn bên trong user.routes để rõ ràng)
+// USERS
+// - Các middleware auth/role đã cấu hình ở bên trong user.routes
 router.use("/users", usersModule.routes);
 
 module.exports = router;
+

@@ -1,5 +1,5 @@
-// backend/src/modules/uploads/validators/upload.validator.js
 
+// backend/src/modules/uploads/validators/upload.validator.js
 const BUCKETS = {
   images: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"],
   videos: ["video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska"],

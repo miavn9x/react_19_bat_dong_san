@@ -1,4 +1,5 @@
 // backend/src/index.js
+
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
@@ -13,21 +14,40 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// (Tuỳ hạ tầng proxy/CDN) giúp đọc x-forwarded-* khi dựng canonical, rate-limit...
+app.set("trust proxy", true);
+
 // ---- Middlewares nền tảng
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
 
 // ---- Serve tĩnh thư mục uploads (lưu trực tiếp trên máy chủ)
 //  Thư mục vật lý: backend/src/uploads
 const UPLOADS_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Express không có option "immutable" -> set qua setHeaders
 app.use(
   "/uploads",
-  express.static(UPLOADS_DIR, { maxAge: "7d", etag: true })
+  express.static(UPLOADS_DIR, {
+    fallthrough: false, // 404 nếu không có file
+    index: false,       // không serve index.html
+    etag: true,
+    maxAge: "7d",       // backup, sẽ ghi đè bằng setHeaders
+    setHeaders(res /*, filePath */) {
+      // 7 ngày = 604800 giây
+      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    },
+  })
 );
 
 // ---- Mount API

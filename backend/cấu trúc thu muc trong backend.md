@@ -88,3 +88,14 @@ backend/
 │        ├─ images/ YYYY/MM/DD/...
 │        ├─ videos/ YYYY/MM/DD/...
 │        └─ audios/ YYYY/MM/DD/...
+
+
+Quyền (nhắc lại – đã đúng trong code)
+| Hành động          | Khách | User (login) | Admin |
+| ------------------ | :---: | :----------: | :---: |
+| Truy cập file tĩnh |   ✅   |       ✅      |   ✅   |
+| List / Detail meta |   ✅   |       ✅      |   ✅   |
+| Upload (1/nhiều)   |   ❌   |       ✅      |   ✅   |
+| Sửa meta (PATCH)   |   ❌   |       ❌      |   ✅   |
+| Thay file (PUT)    |   ❌   |       ❌      |   ✅   |
+| Xoá (DELETE)       |   ❌   |       ❌      |   ✅   |
