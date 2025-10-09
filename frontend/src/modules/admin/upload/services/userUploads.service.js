@@ -1,5 +1,5 @@
 //frontend/src/modules/admin/upload/services/userUploads.service.js
-// Service upload trong user
+/** Dịch vụ upload cho user (đã login) */
 import { API_BASE, authHeaders } from "../config/api";
 import { xhrUpload } from "../../../../utils/xhrUpload";
 
@@ -10,7 +10,7 @@ export async function getUploadLimit(bucket) {
 }
 
 export async function listFiles(params = {}) {
-  const { bucket, group, page = 1, limit = 24, q } = params;
+  const { bucket, group, page = 1, limit = 16, q } = params;
   const qp = new URLSearchParams({ page, limit });
   if (bucket) qp.set("bucket", bucket);
   if (group) qp.set("group", group);

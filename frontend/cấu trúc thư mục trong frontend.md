@@ -74,3 +74,53 @@ bổ sung src/upload/ dung up ảnh ...
    ├─ AdminUploadsPage.jsx        // (#1) Quản lý (CRUD) – tái sử dụng
    ├─ PublicGalleryPage.jsx       // (#2) Xem media: không login & có login
    └─ UserUploadTestPage.jsx      // (#3) Test upload cho user – tái sử dụng
+
+
+{
+  "_id": {
+    "$oid": "68e7d5d841798fcf01e2c249"
+  },
+  "owner": {
+    "$oid": "68e519a1b6846a0541fbafdd"
+  },
+  "bucket": "images",
+  "type": "image/jpeg",
+  "ext": ".jpg",
+  "originalName": "mẫu 02 - Copy (3).jpg",
+  "size": 810762,
+  "relPath": "uploads/images/2025/10/09/mu_02_-_copy_3_mia_9x_20251009_223344_1760024024084_lcf9kdl0th.jpg",
+  "url": "/uploads/images/2025/10/09/mu_02_-_copy_3_mia_9x_20251009_223344_1760024024084_lcf9kdl0th.jpg",
+  "year": 2025,
+  "month": 10,
+  "day": 9,
+  "label": "",
+  "group": "post:test",
+  "order": 0,
+  "__v": 0,
+  "createdAt": {
+    "$date": "2025-10-09T15:33:44.096Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-09T15:33:44.096Z"
+  }
+}
+
+{
+  "_id": {
+    "$oid": "68e519a1b6846a0541fbafdd"
+  },
+  "name": "Mía 9X",
+  "email": "miavn9x@gmail.com",
+  "password": "$2b$10$Z.WoYFJNeXQXGlBYe0PTmO3Ib3jtoa2dy/wbpH.NXAt/Zl9QJ6PXm",
+  "avatar": "https://m.yodycdn.com/blog/anh-dep-3d-yodyvn.jpg",
+  "phone": "0987654321",
+  "address": "ádfghj",
+  "role": "admin",
+  "createdAt": {
+    "$date": "2025-10-07T13:46:09.522Z"
+  },
+  "updatedAt": {
+    "$date": "2025-10-07T17:25:38.867Z"
+  },
+  "__v": 0
+}

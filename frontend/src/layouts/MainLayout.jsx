@@ -300,7 +300,7 @@ export default function MainLayout() {
               <li><Link to="/gioi-thieu" className="hover:text-indigo-600 transition-colors">Giới thiệu</Link></li>
               <li><Link to="/ban-tin" className="hover:text-indigo-600 transition-colors">Bản tin</Link></li>
               <li><Link to="/bat-dong-san" className="hover:text-indigo-600 transition-colors">Bất động sản</Link></li>
-              <li><Link to="/dashboard" className="hover:text-indigo-600 transition-colors">Bảng điều khiển</Link></li>
+              <li><Link to="/admin" className="hover:text-indigo-600 transition-colors">Bảng điều khiển</Link></li>
             </ul>
           </div>
           <div>

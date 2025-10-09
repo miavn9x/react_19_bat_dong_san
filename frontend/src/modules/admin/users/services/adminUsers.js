@@ -1,7 +1,7 @@
 import api from "../../../../services/http";
 
 // Danh sách người dùng (có tìm kiếm/paginate)
-export async function listUsers({ page = 1, limit = 20, q = "" } = {}) {
+export async function listUsers({ page = 1, limit = 16, q = "" } = {}) {
   const { data } = await api.get("/users", { params: { page, limit, q } });
   return data; // { items, total, page, limit }
 }

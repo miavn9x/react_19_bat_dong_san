@@ -1,8 +1,9 @@
 // backend/src/modules/uploads/services/adminUploads.service.js
+/** Lấy limit theo bucket để FE validate/hiển thị */
+
 import { API_BASE, authHeaders } from "../config/api";
 import { xhrUpload } from "../../../../utils/xhrUpload";
 
-/** Lấy limit theo bucket để FE validate/hiển thị */
 export async function getUploadLimit(bucket) {
   const res = await fetch(`${API_BASE}/uploads/_info/limits/${bucket}`);
   if (!res.ok) throw new Error(await res.text());
@@ -11,7 +12,7 @@ export async function getUploadLimit(bucket) {
 
 /** List file (public + admin dùng) */
 export async function listFiles(params = {}) {
-  const { bucket, group, year, month, day, q, page = 1, limit = 24, sort } = params;
+  const { bucket, group, year, month, day, q, page = 1, limit = 16, sort } = params;
   const qp = new URLSearchParams({ page, limit });
   if (bucket) qp.set("bucket", bucket);
   if (group) qp.set("group", group);

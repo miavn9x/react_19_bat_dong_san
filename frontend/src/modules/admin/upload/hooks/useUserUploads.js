@@ -1,11 +1,10 @@
 //frontend/src/modules/admin/upload/hooks/useUserUploads.js
-// Hook quản lý upload trong user
-// Hook quản lý upload trong user (list + upload có % tiến trình)
+/** Hook quản lý upload cho user (đã login) */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listFiles, uploadMany, getUploadLimit } from "../services/userUploads.service";
 
 /** Lấy danh sách file (public endpoint), lọc theo filters */
-export function useUserUploadList({ filters, pageSize = 18 }) {
+export function useUserUploadList({ filters, pageSize = 16 }) {
   const [state, set] = useState({
     items: [],
     total: 0,

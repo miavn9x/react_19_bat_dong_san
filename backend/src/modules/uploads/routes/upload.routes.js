@@ -1,22 +1,25 @@
-
-
-
 // // backend/src/modules/uploads/routes/upload.routes.js
+// /**
+//  * Upload routes:
+//  * - Upload file lên server
+//  * - Lưu metadata file vào MongoDB
+//  * 
+//  */
 // const router = require("express").Router();
 // const multer = require("multer");
 // const path = require("path");
 // const auth = require("../../../middlewares/auth");
 // const { requireRole, authOptional } = require("../../../middlewares/auth");
-// const { buildPath } = require("../services/storage.service");
+// const { buildPath, normalizeOriginalName } = require("../services/storage.service");
 // const { assertBucket, allowMime } = require("../validators/upload.validator");
 // const ctrl = require("../controllers/upload.controller");
 
 // // ===== Dung lượng theo bucket =====
 // const SIZE = { MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
 // const LIMITS_BY_BUCKET = {
-//   images: 5 * SIZE.MB,      // ảnh: 5MB
-//   videos: 8 * SIZE.GB,      // video: 8GB (tùy bạn chỉnh)
-//   audios: 500 * SIZE.MB,    // audio: 500MB
+//   images: 5 * SIZE.MB,      // ảnh: 5MB / file
+//   videos: 8 * SIZE.GB,      // video: 8GB / file
+//   audios: 500 * SIZE.MB,    // audio: 500MB / file
 // };
 
 // // ===== Multer storage + MIME filter =====
@@ -39,8 +42,16 @@
 //   filename: async (req, file, cb) => {
 //     try {
 //       const bucket = req.params.bucket || req.body.bucket;
-//       const meta = await buildPath(bucket, file.originalname);
-//       file._meta = meta; // đính kèm để middleware sau dùng
+//       assertBucket(bucket);
+
+//       // Decode tên gốc về UTF-8 trước khi build đường dẫn
+//       const originalUtf8 = normalizeOriginalName(file.originalname);
+//       const meta = await buildPath(bucket, originalUtf8);
+
+//       // đính kèm để middleware sau/controller dùng
+//       file._meta = meta;
+//       file._originalnameUtf8 = originalUtf8;
+
 //       cb(null, path.basename(meta.abs));
 //     } catch (e) { cb(e); }
 //   },
@@ -62,16 +73,15 @@
 //   return multer({ storage, fileFilter, limits: { fileSize: limitBytes } });
 // }
 
-// /** Upload nhiều file theo bucket (áp limit) */
+// /** Upload nhiều file theo bucket (áp limit từng file) — dùng .any() để tránh Unexpected field */
 // function uploadMultiForBucket(req, res, next) {
 //   try {
 //     const bucket = req.params.bucket || req.body.bucket;
 //     assertBucket(bucket);
 //     const limitBytes = LIMITS_BY_BUCKET[bucket];
-//     const uploader = makeUploader(limitBytes).fields([
-//       { name: "file", maxCount: 1 },
-//       { name: "files", maxCount: 40 }, // batch an toàn
-//     ]);
+
+//     // Dùng .any() để chấp nhận mọi tên field (file, files, files[], files[0]...)
+//     const uploader = makeUploader(limitBytes).any();
 //     uploader(req, res, (err) => (err ? next(err) : next()));
 //   } catch (e) { next(e); }
 // }
@@ -87,19 +97,33 @@
 //   } catch (e) { next(e); }
 // }
 
-// /** Gắn meta từ _meta vào req.filesNormalized */
+// /** Gắn meta từ _meta vào req.filesNormalized (chuẩn hoá cho .any()) */
 // function attachMetaMany(req, res, next) {
+//   // Với .any(), req.files là MẢNG các file; Multer không group theo key
+//   const filesArr = Array.isArray(req.files)
+//     ? req.files
+//     : (req.files && typeof req.files === "object"
+//         ? Object.values(req.files).flat()
+//         : []);
+
+//   // Giới hạn số lượng file tối đa/batch (an toàn)
+//   const MAX_BATCH = 40;
+//   if (filesArr.length > MAX_BATCH) {
+//     return res.status(400).json({ message: `Quá số lượng file cho phép (${MAX_BATCH})` });
+//   }
+
 //   const norm = [];
-//   const byField = req.files || {};
 //   const pushWithMeta = (f) => {
-//     if (f && f._meta) {
+//     if (!f) return;
+//     if (f._meta) {
 //       const { rel, url, y, m, d, ext } = f._meta;
 //       f.relPath = rel; f.url = url; f.year = y; f.month = m; f.day = d; f.ext = ext;
+//       f.originalnameUtf8 = f._originalnameUtf8 || f.originalname;
 //     }
-//     if (f) norm.push(f);
+//     norm.push(f);
 //   };
-//   (byField.file || []).forEach(pushWithMeta);
-//   (byField.files || []).forEach(pushWithMeta);
+
+//   filesArr.forEach(pushWithMeta);
 
 //   req.filesNormalized = norm;
 //   next();
@@ -109,17 +133,14 @@
 //   if (req.file && req.file._meta) {
 //     const { rel, url, y, m, d, ext } = req.file._meta;
 //     req.file.relPath = rel; req.file.url = url; req.file.year = y; req.file.month = m; req.file.day = d; req.file.ext = ext;
+//     req.file.originalnameUtf8 = req.file._originalnameUtf8 || req.file.originalname;
 //   }
 //   next();
 // }
 
 // /* ---------- ROUTES ---------- */
 
-// // PUBLIC: list + detail
-// router.get("/", authOptional, ctrl.list);
-// router.get("/:id", authOptional, ctrl.getOne);
-
-// // INFO: cho FE biết limits theo bucket (hiển thị UI/validate trước khi gửi)
+// // INFO: cho FE biết limits theo bucket (đặt TRƯỚC :id để không bị nuốt)
 // router.get("/_info/limits/:bucket", (req, res) => {
 //   try {
 //     const { bucket } = req.params;
@@ -130,20 +151,67 @@
 //   }
 // });
 
+// // PUBLIC: list + detail
+// router.get("/", authOptional, ctrl.list);
+// router.get("/:id", authOptional, ctrl.getOne);
+
 // // USER/ADMIN: upload nhiều (hoặc 1) file — áp limit theo bucket
 // router.post("/:bucket", auth, uploadMultiForBucket, attachMetaMany, ctrl.createMany);
 
 // // ADMIN: sửa meta
 // router.patch("/:id", auth, requireRole("admin"), ctrl.updateMeta);
 
-// // ADMIN: thay 1 file — áp limit theo bucket
+// // ADMIN: thay 1 file — áp limit theo bucket (chuẩn REST -> PUT)
 // router.put("/:id/:bucket", auth, requireRole("admin"), uploadSingleForBucket, attachMetaSingle, ctrl.replace);
+
+// // (TÙY CHỌN) Alias cho ai lỡ gọi POST thay vì PUT khi replace — tránh 404
+// router.post("/:id/:bucket", auth, requireRole("admin"), uploadSingleForBucket, attachMetaSingle, ctrl.replace);
 
 // // ADMIN: xoá
 // router.delete("/:id", auth, requireRole("admin"), ctrl.remove);
 
 // module.exports = router;
-// backend/src/modules/uploads/routes/upload.routes.js
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// backend/src/modules/uploads/models/file.model.js
+/**
+ * Upload Routes (Express)
+ * -----------------------------------------
+ * Chức năng:
+ *  - Nhận multipart upload (1 hoặc nhiều file).
+ *  - Lưu file lên disk (diskStorage) và gắn meta vào req.file(s).
+ *  - Chặn MIME theo bucket + giới hạn dung lượng theo bucket.
+ *
+ * Lưu ý:
+ *  - Dùng `.any()` để không bị "LIMIT_UNEXPECTED_FILE" bởi tên field khác nhau.
+ *  - Gắn `req.filesNormalized` để controller xử lý thống nhất.
+ *  - Giữ nguyên các route đã có (list, detail, createMany, updateMeta, replace, remove).
+ */
+
 const router = require("express").Router();
 const multer = require("multer");
 const path = require("path");
@@ -156,9 +224,9 @@ const ctrl = require("../controllers/upload.controller");
 // ===== Dung lượng theo bucket =====
 const SIZE = { MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
 const LIMITS_BY_BUCKET = {
-  images: 5 * SIZE.MB,      // ảnh: 5MB
-  videos: 8 * SIZE.GB,      // video: 8GB
-  audios: 500 * SIZE.MB,    // audio: 500MB
+  images: 5 * SIZE.MB,      // ảnh: 5MB / file
+  videos: 8 * SIZE.GB,      // video: 8GB / file
+  audios: 500 * SIZE.MB,    // audio: 500MB / file
 };
 
 // ===== Multer storage + MIME filter =====
@@ -196,6 +264,7 @@ const storage = multer.diskStorage({
   },
 });
 
+/** Kiểm mime theo bucket */
 function fileFilter(req, file, cb) {
   try {
     const bucket = req.params.bucket || req.body.bucket;
@@ -212,16 +281,17 @@ function makeUploader(limitBytes) {
   return multer({ storage, fileFilter, limits: { fileSize: limitBytes } });
 }
 
-/** Upload nhiều file theo bucket (áp limit) */
+/**
+ * Upload nhiều file theo bucket (áp limit từng file)
+ * - Dùng .any() để chấp nhận mọi tên field (file, files, files[], files[0]...) → tránh MulterError: Unexpected field
+ */
 function uploadMultiForBucket(req, res, next) {
   try {
     const bucket = req.params.bucket || req.body.bucket;
     assertBucket(bucket);
     const limitBytes = LIMITS_BY_BUCKET[bucket];
-    const uploader = makeUploader(limitBytes).fields([
-      { name: "file", maxCount: 1 },
-      { name: "files", maxCount: 40 }, // batch an toàn
-    ]);
+
+    const uploader = makeUploader(limitBytes).any();
     uploader(req, res, (err) => (err ? next(err) : next()));
   } catch (e) { next(e); }
 }
@@ -237,26 +307,41 @@ function uploadSingleForBucket(req, res, next) {
   } catch (e) { next(e); }
 }
 
-/** Gắn meta từ _meta vào req.filesNormalized */
+/**
+ * Chuẩn hóa req.filesNormalized từ req.files (khi dùng .any())
+ * - Thêm các meta: relPath/url/year/month/day/ext/originalnameUtf8 từ file._meta đã gắn ở storage
+ * - Giới hạn batch tối đa 40 file để an toàn
+ */
 function attachMetaMany(req, res, next) {
+  const filesArr = Array.isArray(req.files)
+    ? req.files
+    : (req.files && typeof req.files === "object"
+        ? Object.values(req.files).flat()
+        : []);
+
+  const MAX_BATCH = 40;
+  if (filesArr.length > MAX_BATCH) {
+    return res.status(400).json({ message: `Quá số lượng file cho phép (${MAX_BATCH})` });
+  }
+
   const norm = [];
-  const byField = req.files || {};
   const pushWithMeta = (f) => {
-    if (f && f._meta) {
+    if (!f) return;
+    if (f._meta) {
       const { rel, url, y, m, d, ext } = f._meta;
       f.relPath = rel; f.url = url; f.year = y; f.month = m; f.day = d; f.ext = ext;
-      // tên gốc đã decode
       f.originalnameUtf8 = f._originalnameUtf8 || f.originalname;
     }
-    if (f) norm.push(f);
+    norm.push(f);
   };
-  (byField.file || []).forEach(pushWithMeta);
-  (byField.files || []).forEach(pushWithMeta);
+
+  filesArr.forEach(pushWithMeta);
 
   req.filesNormalized = norm;
   next();
 }
 
+/** Gắn meta cho single upload (replace) */
 function attachMetaSingle(req, res, next) {
   if (req.file && req.file._meta) {
     const { rel, url, y, m, d, ext } = req.file._meta;
@@ -268,11 +353,7 @@ function attachMetaSingle(req, res, next) {
 
 /* ---------- ROUTES ---------- */
 
-// PUBLIC: list + detail
-router.get("/", authOptional, ctrl.list);
-router.get("/:id", authOptional, ctrl.getOne);
-
-// INFO: cho FE biết limits theo bucket (hiển thị UI/validate trước khi gửi)
+// INFO: cho FE biết limits theo bucket (đặt TRƯỚC :id để không bị nuốt)
 router.get("/_info/limits/:bucket", (req, res) => {
   try {
     const { bucket } = req.params;
@@ -283,14 +364,21 @@ router.get("/_info/limits/:bucket", (req, res) => {
   }
 });
 
+// PUBLIC: list + detail
+router.get("/", authOptional, ctrl.list);
+router.get("/:id", authOptional, ctrl.getOne);
+
 // USER/ADMIN: upload nhiều (hoặc 1) file — áp limit theo bucket
 router.post("/:bucket", auth, uploadMultiForBucket, attachMetaMany, ctrl.createMany);
 
 // ADMIN: sửa meta
 router.patch("/:id", auth, requireRole("admin"), ctrl.updateMeta);
 
-// ADMIN: thay 1 file — áp limit theo bucket
+// ADMIN: thay 1 file — áp limit theo bucket (chuẩn REST -> PUT)
 router.put("/:id/:bucket", auth, requireRole("admin"), uploadSingleForBucket, attachMetaSingle, ctrl.replace);
+
+// (TÙY CHỌN) Alias cho ai lỡ gọi POST thay vì PUT khi replace — tránh 404
+router.post("/:id/:bucket", auth, requireRole("admin"), uploadSingleForBucket, attachMetaSingle, ctrl.replace);
 
 // ADMIN: xoá
 router.delete("/:id", auth, requireRole("admin"), ctrl.remove);

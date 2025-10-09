@@ -1,5 +1,5 @@
 // backend/src/modules/users/models/user.model.js
-const { Schema, model } = require("mongoose");
+const { Schema, model, Types } = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const userSchema = new Schema(
@@ -7,14 +7,20 @@ const userSchema = new Schema(
     name:     { type: String, required: true, trim: true },
     email:    { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
-    avatar:   { type: String, default: "" },
+
+    // ===== Avatar (denormalize + ref tới File) =====
+    avatarUrl:  { type: String, default: "" },               // đọc nhanh
+    avatarFile: { type: Types.ObjectId, ref: "File" },       // ràng buộc ngược
+
     phone:    { type: String, default: "" },
     address:  { type: String, default: "" },
     role:     { type: String, enum: ["user", "admin"], default: "user", index: true },
+
+    // ===== Code ổn định để truy vấn (không phụ thuộc _id) =====
+    userCode: { type: String, unique: true, sparse: true, trim: true, index: true },
   },
   { timestamps: true }
 );
-
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
@@ -27,3 +33,4 @@ userSchema.methods.comparePassword = function (plain) {
 };
 
 module.exports = model("User", userSchema);
+

@@ -1,10 +1,13 @@
 //frontend/src/modules/admin/upload/hooks/useAdminUploads.js
 // Hook quản lý upload trong admin
+
+/** Hook quản lý upload trong admin */
+
 import { useCallback, useEffect,  useRef, useState } from "react";
 import { listFiles, uploadMany, updateMeta, replaceFile, deleteFile, getUploadLimit } from "../services/adminUploads.service";
 
 /** Hook list/paginate */
-export function useAdminUploadList({ filters, pageSize = 24 }) {
+export function useAdminUploadList({ filters, pageSize = 16 }) {
   const [state, set] = useState({ items: [], total: 0, page: 1, limit: pageSize, loading: false, error: "" });
 
   const load = useCallback(async (page = 1) => {

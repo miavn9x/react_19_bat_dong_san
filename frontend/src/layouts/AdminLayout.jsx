@@ -1,4 +1,4 @@
- // frontend/src/layouts/AdminLayout.jsx
+// frontend/src/layouts/AdminLayout.jsx
 // Layout dành cho admin (admin mới truy cập được)
 // Bao gồm sidebar, topbar, footer (tuỳ chọn)
 import { useEffect, useState } from "react";
@@ -72,6 +72,22 @@ export default function AdminLayout() {
     };
   }, [sidebarOpen]);
 
+  // ✅ Mặc định cuộn lên đầu trang khi chuyển trang
+  useEffect(() => {
+    // Tắt khôi phục vị trí scroll mặc định của trình duyệt để chủ động điều khiển
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    // Cuộn window
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    // Phòng trường hợp một số trình duyệt dùng documentElement/body
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    // Nếu vùng cuộn chính là thẻ <main>, reset luôn
+    const mainEl = document.querySelector("main");
+    if (mainEl) mainEl.scrollTop = 0;
+  }, [location.pathname, location.search]);
+
   const handleLogout = () => {
     doLogout();
     navigate("/login", { replace: true });
@@ -89,7 +105,7 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+      <header className="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
         <div className="mx-auto container px-4">
           <div className="h-16 flex items-center gap-3">
             {/* Sidebar toggle (mobile) */}
@@ -160,12 +176,11 @@ export default function AdminLayout() {
                 onClick={handleLogout}
                 className="inline-flex items-center justify-center rounded-lg bg-rose-600 px-2 py-1 text-sm font-medium text-white shadow hover:bg-rose-700 transition"
               >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7"
-                          viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
-                        </svg>
-                {/* Đăng xuất */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+                </svg>
               </button>
             </div>
           </div>
@@ -208,16 +223,27 @@ export default function AdminLayout() {
           </div>
 
           <nav className="p-3 space-y-1">
+            <SidebarLink to="/" end>
+              <span className="inline-flex items-center justify-center h-4 w-4 mr-2 text-gray-600" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    d="M3 9.75L12 3l9 6.75M4.5 10.5V19a1.5 1.5 0 001.5 1.5h3v-6h6v6h3A1.5 1.5 0 0020.5 19V10.5" />
+                </svg>
+              </span>
+              Trang chủ
+            </SidebarLink>
+
             <SidebarLink to="/admin" end>📊 Dashboard</SidebarLink>
             <SidebarLink to="/admin/users">👥 Quản lý người dùng</SidebarLink>
             <SidebarLink to="/admin/posts">📰 Quản lý bài đăng</SidebarLink>
+            <SidebarLink to="/admin/uploads">📁 Thư viện media</SidebarLink>
             <SidebarLink to="/admin/settings">⚙️ Cấu hình</SidebarLink>
           </nav>
         </aside>
 
         {/* Content */}
         <main className="flex-1">
-          <div className="mx-auto w-full  px-4 py-8">
+          <div className="mx-auto w-full px-4">
             <Outlet />
           </div>
         </main>

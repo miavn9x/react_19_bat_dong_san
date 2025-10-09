@@ -1,10 +1,6 @@
+// frontend/src/utils/xhrUpload.js
 /**
- * Upload qua XMLHttpRequest để có onprogress (%)
- * - url: endpoint
- * - formData: FormData
- * - headers: object headers (vd Authorization)
- * - onProgress: (0..100)
- * - signal: AbortSignal (nếu cần hủy)
+
  */
 export function xhrUpload({ url, formData, headers = {}, onProgress, signal }) {
   return new Promise((resolve, reject) => {

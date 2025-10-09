@@ -1,5 +1,6 @@
 //frontend/src/modules/admin/upload/pages/serUploadManager.jsx
 // Trang quản lý upload cho user (đã login), upload nhiều + % tiến trình
+/** User Upload Manager */
 import { useMemo, useState } from "react";
 import { useUserUploadList, useUserUploadMany, useUploadLimit } from "../hooks/useUserUploads";
 import UploadDropzone from "../components/UploadDropzone";
