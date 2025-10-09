@@ -1,46 +1,101 @@
-import { useEffect, useMemo, useState } from "react";
+// // frontend/src/modules/admin/upload/pages/PublicGalleryPage.jsx
+// import { useEffect, useMemo, useState } from "react";
+// import useUploads from "../hooks/useUploads";
+// import FiltersBar from "../components/FiltersBar";
+// import MediaViewer from "../components/MediaViewer";
+// import { FILE_BASE, toFileURL } from "../config/fileBase";
+
+// export default function PublicGalleryPage() {
+//   const token = localStorage.getItem("token");
+//   const authed = !!token;
+
+//   // Bộ lọc cho chế độ có đăng nhập
+//   const [filters, setFilters] = useState({ bucket: "images" });
+//   const { items, loading, error, reload } = useUploads({ filters, pageSize: 18 });
+
+//   // Ô nhập tay khi không đăng nhập
+//   const [manualUrl, setManualUrl] = useState("");
+
+//   // Khi có đăng nhập -> nạp danh sách
+//   useEffect(() => {
+//     if (authed) reload(1);
+//   }, [authed, reload]);
+
+//   // URL đã được chuẩn hoá (prefix BE nếu là /uploads/...)
+//   const resolvedUrl = useMemo(() => toFileURL(manualUrl), [manualUrl]);
+
+//   // Đoán MIME từ URL đã chuẩn hoá
+//   const resolvedType = useMemo(() => {
+//     if (!resolvedUrl) return "";
+//     if (/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(resolvedUrl)) return "image/png";
+//     if (/\.(mp4|webm|ogg|mov|mkv)(\?|#|$)/i.test(resolvedUrl))   return "video/mp4";
+//     if (/\.(mp3|wav|aac|ogg)(\?|#|$)/i.test(resolvedUrl))        return "audio/mpeg";
+//     return "";
+//   }, [resolvedUrl]);
+
+//   return (
+//     <div style={{ padding: 16 }}>
+//       <h2>Gallery – Xem media</h2>
+//       <p>Không đăng nhập: dán URL tĩnh để xem. Đăng nhập: xem danh sách qua API.</p>
+
+//       {/* Chế độ KHÔNG đăng nhập: chỉ hiển thị input + viewer */}
+//       {!authed ? (
+//         <div style={{ marginBottom: 16 }}>
+//           <input
+//             style={{ width: "80%" }}
+//             placeholder={`${FILE_BASE}/uploads/images/YYYY/MM/DD/file.jpg`}
+//             value={manualUrl}
+//             onChange={(e) => setManualUrl(e.target.value)}
+//           />
+//           <div style={{ marginTop: 8, maxWidth: 720 }}>
+//             <MediaViewer url={resolvedUrl} type={resolvedType} />
+//           </div>
+//         </div>
+//       ) : (
+//         // Chế độ CÓ đăng nhập: lọc + danh sách từ API
+//         <>
+//           <FiltersBar value={filters} onChange={setFilters} />
+//           {loading && <p>Đang tải...</p>}
+//           {/* Ẩn lỗi 401 khi chưa authed; ở đây đã authed nên cứ hiện */}
+//           {error && <p style={{ color: "red" }}>{error}</p>}
+//           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px,1fr))", gap: 12 }}>
+//             {items.map((f) => (
+//               <div key={f._id} style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
+//                 {/* MediaViewer tự prefix host BE cho f.url dạng /uploads/... */}
+//                 <MediaViewer url={f.url} type={f.type} />
+//                 <div style={{ fontSize: 13, marginTop: 6 }}>{f.originalName}</div>
+//               </div>
+//             ))}
+//           </div>
+//         </>
+//       )}
+//     </div>
+//   );
+// }
+// frontend/src/modules/admin/upload/pages/PublicGalleryPage.jsx
+import { useEffect, useState } from "react";
+import useUploads from "../hooks/useUploads";
 import FiltersBar from "../components/FiltersBar";
 import MediaViewer from "../components/MediaViewer";
 import { FILE_BASE, toFileURL } from "../config/fileBase";
-import { listFiles, listFilesPublic } from "../services/uploads.api";
 
 export default function PublicGalleryPage() {
-  const authed = !!localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  const authed = !!token;
 
   const [filters, setFilters] = useState({ bucket: "images" });
-  const [state, setState] = useState({ items: [], total: 0, page: 1, limit: 18, loading: false, error: "" });
+  const { items, loading, error, reload } = useUploads({ filters, pageSize: 18 });
 
-  const load = async (page = 1) => {
-    setState((s) => ({ ...s, loading: true, error: "" }));
-    try {
-      const fn = authed ? listFiles : listFilesPublic; // ⬅️ chưa login dùng public API
-      const data = await fn({ ...filters, page, limit: state.limit });
-      setState({ items: data.items, total: data.total, page: data.page, limit: data.limit, loading: false, error: "" });
-    } catch (e) {
-      setState((s) => ({ ...s, loading: false, error: e.message || "Load failed" }));
-    }
-  };
-
-  useEffect(() => { load(1); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [authed, JSON.stringify(filters)]);
-
-  // Ô nhập tay khi không đăng nhập (tuỳ chọn)
   const [manualUrl, setManualUrl] = useState("");
-  const resolvedUrl = useMemo(() => toFileURL(manualUrl), [manualUrl]);
-  const resolvedType = useMemo(() => {
-    if (!resolvedUrl) return "";
-    if (/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(resolvedUrl)) return "image/png";
-    if (/\.(mp4|webm|ogg|mov|mkv)(\?|#|$)/i.test(resolvedUrl))   return "video/mp4";
-    if (/\.(mp3|wav|aac|ogg)(\?|#|$)/i.test(resolvedUrl))        return "audio/mpeg";
-    return "";
-  }, [resolvedUrl]);
+
+  useEffect(() => { if (authed) reload(1); }, [authed, reload]);
 
   return (
     <div style={{ padding: 16 }}>
       <h2>Gallery – Xem media</h2>
-      <p>Không đăng nhập: xem danh sách public và có thể dán URL tĩnh. Đăng nhập: xem danh sách qua API đầy đủ.</p>
+      <p>Không đăng nhập: dán URL tĩnh để xem. Đăng nhập: xem danh sách qua API.</p>
 
-      {/* Ô dán URL luôn hiển thị, nhất là cho khách */}
-      {!authed && (
+      {!authed ? (
         <div style={{ marginBottom: 16 }}>
           <input
             style={{ width: "80%" }}
@@ -49,30 +104,31 @@ export default function PublicGalleryPage() {
             onChange={(e) => setManualUrl(e.target.value)}
           />
           <div style={{ marginTop: 8, maxWidth: 720 }}>
-            <MediaViewer url={resolvedUrl} type={resolvedType} />
+            <MediaViewer
+              url={toFileURL(manualUrl)}   // ⬅️ luôn thành URL tuyệt đối
+              type={
+                manualUrl.match(/\.(png|jpe?g|webp|gif|svg)$/i) ? "image/png" :
+                manualUrl.match(/\.(mp4|webm|ogg|mov|mkv)$/i) ? "video/mp4" :
+                manualUrl.match(/\.(mp3|wav|aac|ogg)$/i) ? "audio/mpeg" : ""
+              }
+            />
           </div>
         </div>
-      )}
-
-      <FiltersBar value={filters} onChange={setFilters} />
-      {state.loading && <p>Đang tải...</p>}
-      {state.error && <p style={{ color: "red" }}>{state.error}</p>}
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px,1fr))", gap:12 }}>
-        {state.items.map((f) => (
-          <div key={f._id} style={{ border:"1px solid #eee", borderRadius:12, padding:12 }}>
-            {/* url trả về dạng /uploads/... → MediaViewer tự prefix host BE */}
-            <MediaViewer url={f.url} type={f.type} />
-            <div style={{ fontSize:13, marginTop:6 }}>{f.originalName}</div>
+      ) : (
+        <>
+          <FiltersBar value={filters} onChange={setFilters} />
+          {loading && <p>Đang tải...</p>}
+          {error && <p style={{ color: "red" }}>{error}</p>}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px,1fr))", gap:12 }}>
+            {items.map((f) => (
+              <div key={f._id} style={{ border:"1px solid #eee", borderRadius:12, padding:12 }}>
+                <MediaViewer url={f.url} type={f.type} /> {/* MediaViewer tự prefix */}
+                <div style={{ fontSize:13, marginTop:6 }}>{f.originalName}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <button disabled={state.page <= 1} onClick={() => load(state.page - 1)}>Trước</button>
-        <span style={{ margin: "0 8px" }}>Trang {state.page}</span>
-        <button disabled={state.page * state.limit >= state.total} onClick={() => load(state.page + 1)}>Sau</button>
-      </div>
+        </>
+      )}
     </div>
   );
 }
