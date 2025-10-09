@@ -1,9 +1,15 @@
-// backend/src/modules/uploads/services/adminUploads.service.js
-/** Lấy limit theo bucket để FE validate/hiển thị */
+/**
+ * adminUploads.service.js
+ * ----------------------------------------------------
+ * Mục đích:
+ * - Dịch vụ gọi API upload cho trang Admin.
+ * - Đồng bộ với BE: list (bucket, group, q, page, limit, sort), upload many (files), replace (file), update/delete.
+ */
 
 import { API_BASE, authHeaders } from "../config/api";
 import { xhrUpload } from "../../../../utils/xhrUpload";
 
+/** Lấy limit theo bucket để FE validate/hiển thị */
 export async function getUploadLimit(bucket) {
   const res = await fetch(`${API_BASE}/uploads/_info/limits/${bucket}`);
   if (!res.ok) throw new Error(await res.text());
@@ -12,13 +18,13 @@ export async function getUploadLimit(bucket) {
 
 /** List file (public + admin dùng) */
 export async function listFiles(params = {}) {
-  const { bucket, group, year, month, day, q, page = 1, limit = 16, sort } = params;
-  const qp = new URLSearchParams({ page, limit });
+  const { bucket, group, year, month, day, q, page = 1, limit = 20, sort } = params;
+  const qp = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (bucket) qp.set("bucket", bucket);
   if (group) qp.set("group", group);
-  if (year) qp.set("year", year);
-  if (month) qp.set("month", month);
-  if (day) qp.set("day", day);
+  if (year) qp.set("year", String(year));
+  if (month) qp.set("month", String(month));
+  if (day) qp.set("day", String(day));
   if (q) qp.set("q", q);
   if (sort) qp.set("sort", sort);
 
@@ -30,8 +36,7 @@ export async function listFiles(params = {}) {
 /** Upload nhiều file (hoặc 1) — có tiến trình % (theo tổng request) */
 export async function uploadMany({ bucket, files, group = "", startOrder = 0, labels = [], orders = [], onProgress, signal }) {
   const fd = new FormData();
-  // Field "files" để BE nhận nhiều
-  [...files].forEach((f) => fd.append("files", f));
+  [...files].forEach((f) => fd.append("files", f));  // name 'files' khớp BE (.any())
   if (group) fd.append("group", group);
   fd.append("startOrder", String(startOrder));
   if (labels.length) fd.append("labels", labels.join(","));

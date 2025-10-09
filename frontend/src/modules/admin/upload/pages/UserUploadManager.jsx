@@ -1,6 +1,11 @@
-//frontend/src/modules/admin/upload/pages/serUploadManager.jsx
-// Trang quản lý upload cho user (đã login), upload nhiều + % tiến trình
-/** User Upload Manager */
+// frontend/src/modules/admin/upload/pages/UserUploadManager.jsx
+/**
+ * UserUploadManager.jsx
+ * ----------------------------------------------------
+ * - Upload nhiều file với % tiến trình cho user
+ * - Hiển thị danh sách đã tải + danh sách file lỗi từ BE
+ * - Chặn request rỗng khi người dùng huỷ chọn file
+ */
 import { useMemo, useState } from "react";
 import { useUserUploadList, useUserUploadMany, useUploadLimit } from "../hooks/useUserUploads";
 import UploadDropzone from "../components/UploadDropzone";
@@ -12,10 +17,10 @@ export default function UserUploadManager() {
   const [group, setGroup] = useState("");
   const [filters, setFilters] = useState({ bucket: "images" });
 
-  const { items, total, page, limit, loading, error, reload } =
-    useUserUploadList({ filters, pageSize: 18 });
+  const { items, total, page, limit, loading, error: listError, reload } =
+    useUserUploadList({ filters, pageSize: 20 });
 
-  const { upload, progress, busy, cancel } =
+  const { upload, progress, busy, cancel, error: uploadError, rejected } =
     useUserUploadMany({ bucket });
 
   const { limit: maxBytes } = useUploadLimit(bucket);
@@ -26,8 +31,15 @@ export default function UserUploadManager() {
   );
 
   const onSelect = async (files) => {
-    await upload({ files, group, startOrder: 0 });
-    reload(1);
+    // CHẶN RỖNG: Dropzone có thể gọi với []
+    const arr = Array.from(files || []);
+    if (arr.length === 0) return;
+
+    const okItems = await upload({ files: arr, group, startOrder: 0 });
+    // Sau khi upload (kể cả 207 có errors), refresh list nếu có thay đổi/lỗi
+    if ((okItems && okItems.length) || (rejected && rejected.length)) {
+      reload(1);
+    }
   };
 
   return (
@@ -72,8 +84,27 @@ export default function UserUploadManager() {
         </div>
       )}
 
-      {error && <p className="text-red-600">{error}</p>}
+      {/* Lỗi upload (400/401/500…) */}
+      {uploadError && <p className="text-red-600">{uploadError}</p>}
+      {/* Lỗi list */}
+      {listError && <p className="text-red-600">{listError}</p>}
       {loading && <p>Đang tải...</p>}
+
+      {/* Danh sách file bị loại ở lần upload gần nhất */}
+      {rejected.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800">
+          <div className="font-semibold mb-1">Một số file không được chấp nhận:</div>
+          <ul className="list-disc ml-5 text-sm">
+            {rejected.map((r, i) => (
+              <li key={`${r.originalName}-${i}`}>
+                <b>{r.originalName}</b> — {r.reason === "oversize"
+                  ? `vượt quá giới hạn (${Math.round(r.size/1024/1024)}MB > ${Math.round(r.maxBytes/1024/1024)}MB)`
+                  : "định dạng không hỗ trợ"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
         {items.map((f) => (

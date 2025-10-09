@@ -1,11 +1,25 @@
-// // // //frontend/src/modules/admin/upload/pages/AdminUploadManager.jsx
+/** 
+ * AdminUploadManager.jsx
+ * ----------------------------------------------------
+ * Mục đích:
+ * - Trang quản trị media: list/paginate + chỉnh sửa meta (label/group/order),
+ *   thay file & xóa file.
+ * - Đồng bộ với BE:
+ *   + Lọc theo: bucket, group, q
+ *   + Phân trang: pageSize = 20 (BE ép cứng ≤ 20)
+ *   + Upload thay file theo bucket gốc của file.
+ *
+ * Lưu ý:
+ * - Dùng hook useAdminUploadList để load danh sách.
+ * - Dùng useAdminCrud để update/replace/delete.
+ * - Ô tìm kiếm debounce 300ms.
+ */
 
-/** Admin Upload Manager */
 import { useMemo, useRef, useState, useEffect } from "react";
 import {
   useAdminCrud,
   useAdminUploadList,
-  // useUploadLimit,
+  // useUploadLimit, // có thể bật nếu muốn hiển thị limit của bucket
 } from "../hooks/useAdminUploads";
 import ProgressBar from "../components/ProgressBar";
 import MediaViewer from "../components/MediaViewer";
@@ -20,45 +34,44 @@ export default function AdminUploadManager() {
     q: "",
   });
 
+  // BE ép limit ≤ 20 ⇒ pageSize = 20
   const { items, total, page, limit, loading, error, reload } =
-    useAdminUploadList({ filters, pageSize: 24 });
+    useAdminUploadList({ filters, pageSize: 20 });
 
   // const { limit: maxBytes } = useUploadLimit(bucket);
 
   const accept = useMemo(
-    () =>
-      bucket === "images"
-        ? "image/*"
-        : bucket === "videos"
-        ? "video/*"
-        : "audio/*",
+    () => (bucket === "images" ? "image/*" : bucket === "videos" ? "video/*" : "audio/*"),
     [bucket]
   );
 
   // ===== Scroll-to-top helpers =====
   const topRef = useRef(null);
-  const scrollToTop = () => {
-    // Ưu tiên cuộn tới main header; fallback cuộn cả cửa sổ
-    if (topRef.current?.scrollIntoView) {
-      try {
-        topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-      } catch {
-        // ignore
-      }
+// ... bên trong AdminUploadManager.jsx
+
+const scrollToTop = () => {
+  // Ưu tiên cuộn tới main header; fallback cuộn cả cửa sổ
+  if (topRef.current?.scrollIntoView) {
+    try {
+      topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      // tránh no-empty (no-op)
+      void e;
     }
-    if (typeof window !== "undefined") {
-      try {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } catch {
-        // ignore
-      }
+  }
+  if (typeof window !== "undefined") {
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      // tránh no-empty (no-op)
+      void e;
     }
-  };
+  }
+};
+
 
   // Khi trang thay đổi (do gọi reload), tự cuộn lên đầu
-  useEffect(() => {
-    scrollToTop();
-  }, [page]);
+  useEffect(() => { scrollToTop(); }, [page]);
 
   const onChangeBucket = (bk) => {
     setBucket(bk);
@@ -86,19 +99,15 @@ export default function AdminUploadManager() {
   };
 
   return (
-    // ====== Layout gốc: đẩy footer xuống đáy ======
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Anchor để scrollToTop */}
       <div ref={topRef} aria-hidden="true" />
 
-      {/* Nội dung chính */}
       <main className="mx-auto flex-1 p-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">
-              Thư viện Media
-            </h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Thư viện Media</h2>
             <p className="text-sm text-gray-600">
               Quản lý hình ảnh, video và audio. Thay file, chỉnh sửa meta hoặc xóa.
             </p>
@@ -112,9 +121,7 @@ export default function AdminUploadManager() {
                 type="button"
                 aria-label={`Chọn bucket ${bk}`}
                 className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  bucket === bk
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-100"
+                  bucket === bk ? "bg-indigo-600 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
                 }`}
                 onClick={() => onChangeBucket(bk)}
               >
@@ -158,24 +165,15 @@ export default function AdminUploadManager() {
                 aria-label="Tìm kiếm media"
               />
               <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg className="h-5 w-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 21l-4.35-4.35M10 18a8 8 0 110-16 8 8 0 010 16z" />
                 </svg>
               </span>
             </div>
-            {/* Giới hạn bucket nếu cần hiển thị */}
             {/* {typeof maxBytes === "number" && (
               <p className="text-xs text-gray-500">
-                Giới hạn bucket <span className="font-medium">{bucket}</span>:{" "}
-                {(maxBytes / (1024 * 1024)).toFixed(0)} MB/file
+                Giới hạn bucket <span className="font-medium">{bucket}</span>: {(maxBytes / (1024 * 1024)).toFixed(0)} MB/file
               </p>
             )} */}
           </div>
@@ -220,19 +218,13 @@ export default function AdminUploadManager() {
         </div>
       </main>
 
-      {/* ====== Footer phân trang: luôn nằm dưới chân trang ====== */}
+      {/* Footer phân trang */}
       <FooterPagination
         total={total}
         page={page}
         limit={limit}
-        onPrev={() => {
-          scrollToTop();
-          reload(page - 1);
-        }}
-        onNext={() => {
-          scrollToTop();
-          reload(page + 1);
-        }}
+        onPrev={() => { scrollToTop(); reload(page - 1); }}
+        onNext={() => { scrollToTop(); reload(page + 1); }}
         canPrev={page > 1}
         canNext={page * limit < total}
       />
@@ -240,29 +232,19 @@ export default function AdminUploadManager() {
   );
 }
 
-/* ========= Footer Pagination ========= */
-function FooterPagination({ total, page,  onPrev, onNext, canPrev, canNext }) {
+/** Footer Pagination: hiển thị tổng, nút Trước/Sau */
+function FooterPagination({ total, page, onPrev, onNext, canPrev, canNext }) {
   return (
     <footer className="border-t bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-3">
-          <p className="text-sm text-gray-600">
-            Tổng <span className="font-medium">{total}</span> mục
-          </p>
+          <p className="text-sm text-gray-600">Tổng <span className="font-medium">{total}</span> mục</p>
           <div className="flex items-center gap-3">
-            <button
-              className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition text-sm font-medium"
-              disabled={!canPrev}
-              onClick={onPrev}
-            >
+            <button className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition text-sm font-medium" disabled={!canPrev} onClick={onPrev}>
               Trước
             </button>
             <span className="text-sm text-gray-600">Trang {Math.max(1, page)}</span>
-            <button
-              className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition text-sm font-medium"
-              disabled={!canNext}
-              onClick={onNext}
-            >
+            <button className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition text-sm font-medium" disabled={!canNext} onClick={onNext}>
               Sau
             </button>
           </div>
@@ -272,14 +254,10 @@ function FooterPagination({ total, page,  onPrev, onNext, canPrev, canNext }) {
   );
 }
 
-/* ========= Cards & Rows ========= */
+/** Thẻ file: preview + meta + hành động admin */
 function MediaCard({ file, accept, onChanged }) {
   return (
-    <div
-      tabIndex={0}
-      className="group rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      aria-label={`Media ${file.originalName}`}
-    >
+    <div tabIndex={0} className="group rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label={`Media ${file.originalName}`}>
       {/* Preview */}
       <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
         <MediaViewer url={file.url} type={file.type} />
@@ -288,28 +266,16 @@ function MediaCard({ file, accept, onChanged }) {
 
       {/* Meta */}
       <div className="p-4 space-y-1.5 text-sm">
-        <div className="font-semibold text-gray-800 truncate" title={file.originalName}>
-          {file.originalName}
-        </div>
+        <div className="font-semibold text-gray-800 truncate" title={file.originalName}>{file.originalName}</div>
         <div className="text-gray-600 flex items-center gap-2">
-          <span className="truncate">{file.bucket}</span>
-          <span>•</span>
-          <span className="truncate">{file.type}</span>
+          <span className="truncate">{file.bucket}</span><span>•</span><span className="truncate">{file.type}</span>
         </div>
         <div className="text-gray-600">
           {file.year}-{String(file.month).padStart(2, "0")}-{String(file.day).padStart(2, "0")}
         </div>
-        {file.group && (
-          <div className="truncate text-gray-600" title={file.group}>
-            Group: {file.group}
-          </div>
-        )}
+        {file.group && <div className="truncate text-gray-600" title={file.group}>Group: {file.group}</div>}
         {Number.isFinite(file.order) && <div className="text-gray-600">Order: {file.order}</div>}
-        {file.label && (
-          <div className="truncate text-gray-600" title={file.label}>
-            Label: {file.label}
-          </div>
-        )}
+        {file.label && <div className="truncate text-gray-600" title={file.label}>Label: {file.label}</div>}
       </div>
 
       {/* Actions */}
@@ -320,18 +286,13 @@ function MediaCard({ file, accept, onChanged }) {
   );
 }
 
+/** Badge loại MIME đơn giản */
 function BadgeType({ type }) {
-  const label =
-    type?.startsWith("image/") ? "IMAGE" :
-    type?.startsWith("video/") ? "VIDEO" :
-    type?.startsWith("audio/") ? "AUDIO" : "FILE";
-  return (
-    <span className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold rounded-full bg-black/70 text-white tracking-wide">
-      {label}
-    </span>
-  );
+  const label = type?.startsWith("image/") ? "IMAGE" : type?.startsWith("video/") ? "VIDEO" : type?.startsWith("audio/") ? "AUDIO" : "FILE";
+  return <span className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold rounded-full bg-black/70 text-white tracking-wide">{label}</span>;
 }
 
+/** Hàng action Admin: lưu meta / thay file / xóa */
 function AdminRow({ file, onChanged, accept }) {
   const { update, replace, remove } = useAdminCrud();
   const [label, setLabel] = useState(file.label || "");
@@ -366,82 +327,24 @@ function AdminRow({ file, onChanged, accept }) {
 
   return (
     <div className="space-y-3">
-      {/* Inputs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <input
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Label"
-          aria-label="Nhập label cho file"
-        />
-        <input
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          value={group}
-          onChange={(e) => setGroup(e.target.value)}
-          placeholder="Group"
-          aria-label="Nhập group cho file"
-        />
-        <input
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-          value={order}
-          onChange={(e) => setOrder(e.target.value)}
-          type="number"
-          placeholder="Order"
-          aria-label="Nhập order cho file"
-        />
+        <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Label" aria-label="Nhập label cho file" />
+        <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" value={group} onChange={(e) => setGroup(e.target.value)} placeholder="Group" aria-label="Nhập group cho file" />
+        <input className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" value={order} onChange={(e) => setOrder(e.target.value)} type="number" placeholder="Order" aria-label="Nhập order cho file" />
       </div>
 
-      {/* Actions */}
       <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
-        {/* Lưu */}
-        <button
-          type="button"
-          title="Lưu"
-          aria-label="Lưu meta"
-          onClick={doUpdate}
-          disabled={busy}
-          className="inline-flex items-center justify-center h-10 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 3h10l4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-            <path d="M7 7h8v6H7z" />
-            <path d="M12 17a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
-          </svg>
+        <button type="button" title="Lưu" aria-label="Lưu meta" onClick={doUpdate} disabled={busy} className="inline-flex items-center justify-center h-10 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h10l4 4v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 7h8v6H7z"/><path d="M12 17a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
         </button>
 
-        {/* Thay file */}
-        <label
-          title="Thay file"
-          aria-label="Thay file"
-          className="inline-flex items-center justify-center h-10 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 cursor-pointer transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 16v2a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-2" />
-            <path d="M8 12l4-4 4 4" />
-            <path d="M12 16V8" />
-          </svg>
+        <label title="Thay file" aria-label="Thay file" className="inline-flex items-center justify-center h-10 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 cursor-pointer transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 16v2a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-2"/><path d="M8 12l4-4 4 4"/><path d="M12 16V8"/></svg>
           <input type="file" accept={accept} hidden onChange={doReplace} />
         </label>
 
-        {/* Xóa */}
-        <button
-          type="button"
-          title="Xóa file"
-          aria-label="Xóa file"
-          onClick={doDelete}
-          disabled={busy}
-          className="inline-flex items-center justify-center h-10 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            <path d="M10 11v6M14 11v6" />
-            <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-          </svg>
+        <button type="button" title="Xóa file" aria-label="Xóa file" onClick={doDelete} disabled={busy} className="inline-flex items-center justify-center h-10 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
         </button>
       </div>
 
@@ -450,7 +353,7 @@ function AdminRow({ file, onChanged, accept }) {
   );
 }
 
-/* ========= Skeleton & Empty ========= */
+/** Skeleton khi đang tải */
 function SkeletonGrid() {
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -471,6 +374,7 @@ function SkeletonGrid() {
   );
 }
 
+/** Empty state khi không có kết quả */
 function EmptyState({ onReset }) {
   return (
     <div className="border rounded-xl bg-white p-6 sm:p-8 text-center shadow-sm">
@@ -481,11 +385,7 @@ function EmptyState({ onReset }) {
       </div>
       <h3 className="mt-4 text-lg font-semibold text-gray-800">Không có media phù hợp</h3>
       <p className="mt-2 text-sm text-gray-600">Điều chỉnh bộ lọc (bucket, group, từ khóa) để tìm lại.</p>
-      <button
-        type="button"
-        onClick={onReset}
-        className="mt-4 inline-flex items-center rounded-lg px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm font-medium"
-      >
+      <button type="button" onClick={onReset} className="mt-4 inline-flex items-center rounded-lg px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm font-medium">
         Đặt lại bộ lọc
       </button>
     </div>
