@@ -1,84 +1,52 @@
-// // // src/guards/RoleRoute.jsx
-// guard route theo role (dùng trong khu admin)
-import { useEffect, useMemo, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
-import { getMe } from "../modules/auth/services/auth";
+
+// // ==========================================
+// // FILE 7: frontend/src/guards/RoleRoute.jsx
+// // ==========================================
+
+
+import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
+
+function parseJwt(token = "") {
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch { return null; }
+}
 
 export default function RoleRoute({ allow = [], children }) {
-  const location = useLocation();
-
-  // Đọc localStorage (không dùng return sớm trước hooks)
-  const localUser = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const localAllowed = useMemo(
-    () => (localUser ? allow.includes(localUser.role) : false),
-    [localUser, allow]
-  );
-
-  // Khóa deps phức tạp: dùng key ổn định
-  const allowKey = useMemo(() => allow.join("|"), [allow]);
-
-  // Trạng thái verify server
-  const [mustLogin, setMustLogin] = useState(!localUser);      // token/lỗi auth
-  const [serverAllowed, setServerAllowed] = useState(localAllowed);
-  const [verified, setVerified] = useState(!localAllowed || !localUser ? true : false);
-  // ^ nếu local chưa đủ quyền / chưa đăng nhập: coi như đã "xác định" -> tránh verify thừa
+  const [checkDone, setCheckDone] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
 
   useEffect(() => {
-    let alive = true;
-
-    // Chỉ verify khi có user và localAllowed (tránh gọi thừa)
-    if (!localUser || !localAllowed) {
-      setVerified(true);
-      return;
-    }
-
-    const verify = async () => {
-      try {
-        const me = await getMe(); // lấy role mới nhất từ server
-        if (!alive) return;
-        localStorage.setItem("user", JSON.stringify(me));
-        // use allowKey (stable string) instead of direct 'allow' to satisfy hook deps
-        const allowedFromKey = allowKey ? allowKey.split("|") : [];
-        setServerAllowed(allowedFromKey.includes(me.role));
-      } catch {
-        if (!alive) return;
-        setMustLogin(true); // token hết hạn / lỗi auth
-      } finally {
-        if (alive) setVerified(true);
-      }
+    const checkRole = () => {
+      const token = localStorage.getItem("token") || "";
+      const role = parseJwt(token)?.role || "";
+      setHasAccess(!!role && allow.includes(role));
+      setCheckDone(true);
     };
+    checkRole();
 
-    verify();
+    const handler = () => checkRole();
+    window.addEventListener("auth-changed", handler);
+    return () => window.removeEventListener("auth-changed", handler);
+  }, [allow]);
 
-    // Re-verify khi tab quay lại & khi đổi route trong khu admin
-    const onVisible = () => {
-      if (document.visibilityState === "visible") verify();
-    };
-    document.addEventListener("visibilitychange", onVisible);
+  if (!checkDone) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
-    return () => {
-      alive = false;
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [location.pathname, allowKey, localUser, localAllowed]);
-
-  // Quyết định điều hướng (sau khi đã khởi tạo hooks)
-  if (mustLogin) return <Navigate to="/login" replace />;
-
-  // Nếu local đã không đủ quyền -> đá ngay (tránh flicker)
-  if (!localAllowed) return <Navigate to="/" replace />;
-
-  // Sau verify: nếu server xác nhận không đủ quyền -> đá khỏi admin
-  if (verified && !serverAllowed) return <Navigate to="/" replace />;
-
-  // Cho render trong lúc verify để mượt
-  return children;
+  return hasAccess ? children : <Navigate to="/" replace />;
 }

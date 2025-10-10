@@ -1,9 +1,9 @@
-// frontend/src/modules/auth/pages/register.jsx
-// trang đăng ký
-
+// ==========================================
+// FILE 5: frontend/src/modules/auth/pages/register.jsx
+// ==========================================
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import useAuth from "../hooks/useAuth"; // ✅ sửa path
+import useAuth from "../hooks/useAuth";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,18 +13,16 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [msg, setMsg] = useState("");
-
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
-
   const [capsOn1, setCapsOn1] = useState(false);
   const [capsOn2, setCapsOn2] = useState(false);
 
+  // FIX: Không đọc 'msg' bên trong effect => không cần thêm 'msg' vào deps
   useEffect(() => {
-    if (msg) setMsg("");
-  }, [name, email, password, confirmPassword]); // eslint-disable-line
+    setMsg("");
+  }, [name, email, password, confirmPassword]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -56,13 +54,6 @@ export default function Register() {
       const status = err?.response?.status;
       if (status === 409 || String(message).toLowerCase().includes("exist")) {
         message = "Email này đã được đăng ký. Vui lòng dùng email khác hoặc đăng nhập.";
-      } else if (status === 400) {
-        if (String(message).toLowerCase().includes("email")) message = "Email không hợp lệ";
-        else if (String(message).toLowerCase().includes("password")) message = "Mật khẩu không đủ mạnh";
-      } else if (status === 422) {
-        message = "Thông tin không hợp lệ. Vui lòng kiểm tra lại.";
-      } else if (status >= 500) {
-        message = "Lỗi hệ thống. Vui lòng thử lại sau.";
       }
       setMsg(message);
     }
@@ -120,7 +111,6 @@ export default function Register() {
               />
             </div>
 
-            {/* Mật khẩu */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Mật khẩu <span className="text-red-500">*</span>
@@ -139,13 +129,10 @@ export default function Register() {
                 />
                 <button
                   type="button"
-                  aria-label={showPw ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                  aria-pressed={showPw}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setShowPw((v) => !v)}
                   className="absolute inset-y-0 right-2 mt-1 grid place-items-center rounded-md px-2 text-gray-500 hover:text-gray-700"
                 >
-                  {/* icon giữ nguyên */}
                   {showPw ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M10.584 10.587A3 3 0 0012 15a3 3 0 002.829-4.082M9.88 4.6A9.77 9.77 0 0112 4c5.523 0 10 4.477 10 8 0 1.345-.47 2.6-1.29 3.674M6.41 6.41C4.31 7.84 3 9.8 3 12c0 3.523 4.477 8 9 8 1.14 0 2.23-.2 3.237-.57" />
@@ -158,11 +145,10 @@ export default function Register() {
                   )}
                 </button>
               </div>
-              {capsOn1 && <p className="mt-1 text-xs text-amber-600">Caps Lock đang bật — kiểm tra lại mật khẩu.</p>}
+              {capsOn1 && <p className="mt-1 text-xs text-amber-600">Caps Lock đang bật</p>}
               <p className="mt-1 text-xs text-gray-500">Tối thiểu 6 ký tự</p>
             </div>
 
-            {/* Nhập lại mật khẩu (chỉ để kiểm tra, KHÔNG gửi lên BE) */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Nhập lại mật khẩu <span className="text-red-500">*</span>
@@ -188,13 +174,10 @@ export default function Register() {
                 />
                 <button
                   type="button"
-                  aria-label={showPw2 ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                  aria-pressed={showPw2}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setShowPw2((v) => !v)}
                   className="absolute inset-y-0 right-2 mt-1 grid place-items-center rounded-md px-2 text-gray-500 hover:text-gray-700"
                 >
-                  {/* icon giữ nguyên */}
                   {showPw2 ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18M10.584 10.587A3 3 0 0012 15a3 3 0 002.829-4.082M9.88 4.6A9.77 9.77 0 0112 4c5.523 0 10 4.477 10 8 0 1.345-.47 2.6-1.29 3.674M6.41 6.41C4.31 7.84 3 9.8 3 12c0 3.523 4.477 8 9 8 1.14 0 2.23-.2 3.237-.57" />
@@ -207,7 +190,7 @@ export default function Register() {
                   )}
                 </button>
               </div>
-              {capsOn2 && <p className="mt-1 text-xs text-amber-600">Caps Lock đang bật — kiểm tra lại mật khẩu.</p>}
+              {capsOn2 && <p className="mt-1 text-xs text-amber-600">Caps Lock đang bật</p>}
               {password && confirmPassword && (
                 <p className={`mt-1 text-xs ${password === confirmPassword ? "text-emerald-600" : "text-red-600"}`}>
                   {password === confirmPassword ? "Mật khẩu khớp" : "Mật khẩu không khớp"}
@@ -239,10 +222,6 @@ export default function Register() {
             <Link to="/login" className="font-medium text-indigo-600 hover:underline">Đăng nhập</Link>
           </p>
         </div>
-
-        <p className="mt-6 text-center text-xs text-gray-400">
-          Bằng cách tiếp tục, bạn đồng ý với Điều khoản & Chính sách bảo mật.
-        </p>
       </div>
     </div>
   );

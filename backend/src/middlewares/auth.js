@@ -1,86 +1,60 @@
-// // backend/src/middlewares/auth.js
-// const jwt = require("jsonwebtoken");
-
-// /** Yêu cầu có token hợp lệ */
-// function auth(req, res, next) {
-//   const hdr = req.headers.authorization || "";
-//   const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
-//   if (!token) return res.status(401).json({ message: "Missing token" });
-
-//   try {
-//     const payload = jwt.verify(token, process.env.JWT_SECRET);
-//     req.userId = payload.sub;
-//     req.userRole = payload.role || "user"; // lưu role vào req
-//     next();
-//   } catch {
-//     return res.status(401).json({ message: "Invalid or expired token" });
-//   }
-// }
-
-// /** Yêu cầu một trong các role */
-// function requireRole(...roles) {
-//   return (req, res, next) => {
-//     if (!req.userRole || !roles.includes(req.userRole)) {
-//       return res.status(403).json({ message: "Forbidden" });
-//     }
-//     next();
-//   };
-// }
-
-// module.exports = auth;
-// module.exports.requireRole = requireRole;
-const jwt = require("jsonwebtoken");
-
-/**
- * Xác thực bắt buộc: yêu cầu có Bearer token hợp lệ.
- * - Chỉ tin HS256 (hoặc sửa theo alg bạn dùng)
- * - Gán req.userId, req.userRole
+/** backend/src/middlewares/auth.js
+ *  - Access JWT auth: xác thực + kiểm tra phiên chưa revoke/hết hạn
+ *  - requireRole('admin'): kiểm tra role từ token (nhanh)
+ *  - requireRoleDb('admin'): kiểm tra role trực tiếp từ DB (an toàn trước token cũ)
  */
-function auth(req, res, next) {
-  const hdr = req.headers.authorization || "";
-  const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
-  if (!token) return res.status(401).json({ message: "Missing token" });
+const jwt = require("jsonwebtoken");
+const AuthSession = require("../modules/auth/models/authSession.model");
+const User = require("../modules/users/models/user.model");
 
+const JWT_ALGS = ["HS256"];
+const getAccessSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+
+async function auth(req, res, next) {
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET, {
-      algorithms: ["HS256"],
-    });
+    const hdr = req.get("authorization") || "";
+    const m = hdr.match(/^Bearer\s+(.+)$/i);
+    if (!m) return res.status(401).json({ message: "Unauthorized" });
+
+    const token = m[1];
+    const payload = jwt.verify(token, getAccessSecret(), { algorithms: JWT_ALGS });
+
     req.userId = payload.sub;
-    req.userRole = payload.role || "user"; // "user" | "admin"
-    return next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
-  }
-}
+    req.sessionId = payload.sid;
+    req.role = payload.role;
 
-/** Cho phép truy cập khi không có token; nếu có token thì gán user vào req */
-function authOptional(req, res, next) {
-  const hdr = req.headers.authorization || "";
-  const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
-  if (!token) return next();
-
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET, {
-      algorithms: ["HS256"],
-    });
-    req.userId = payload.sub;
-    req.userRole = payload.role || "user";
-  } catch (_) {
-    // Bỏ qua lỗi; coi như khách
-  }
-  return next();
-}
-
-/** Yêu cầu một trong các role */
-function requireRole(...roles) {
-  return (req, res, next) => {
-    if (!req.userRole || !roles.includes(req.userRole)) {
-      return res.status(403).json({ message: "Forbidden" });
+    const sess = await AuthSession.findOne({ sessionId: req.sessionId, userId: req.userId })
+      .select("revokedAt refreshTokenExpiresAt");
+    if (!sess || sess.revokedAt || sess.refreshTokenExpiresAt.getTime() <= Date.now()) {
+      return res.status(401).json({ message: "Session expired or revoked" });
     }
+    next();
+  } catch {
+    res.status(401).json({ message: "Unauthorized" });
+  }
+}
+
+// Kiểm tra role từ token (nhanh, nhưng có thể “trễ” khi role vừa đổi)
+function requireRole(role) {
+  return (req, res, next) => {
+    if (!req.role || req.role !== role) return res.status(403).json({ message: "Forbidden" });
     next();
   };
 }
 
-module.exports = auth;
-module.exports.authOptional = authOptional;
-module.exports.requireRole = requireRole;
+// Kiểm tra role trực tiếp từ DB (an toàn tuyệt đối trước token cũ)
+// Kiểm tra role trực tiếp DB (an toàn trước token cũ)
+function requireRoleDb(role) {
+  return async (req, res, next) => {
+    try {
+      const u = await User.findById(req.userId).select("_id role");
+      if (!u) return res.status(401).json({ message: "Unauthorized" });
+      if (u.role !== role) return res.status(403).json({ message: "Forbidden" });
+      next();
+    } catch (e) {
+      res.status(500).json({ message: "Server error" });
+    }
+  };
+}
+
+module.exports = { auth, requireRole, requireRoleDb };

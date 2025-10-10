@@ -1,38 +1,46 @@
+// // ==========================================
+// // FILE 2: frontend/src/modules/auth/services/auth.js
+// // ==========================================
+
 // frontend/src/modules/auth/services/auth.js
-import api from "../../../services/http";
+import http from "../../../services/http";
 
 export const AUTH_EVENT = "auth-changed";
-
 function emitAuthChanged() {
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
-/** Đăng nhập: { email, password } -> { token, user } */
+/** Đăng nhập: lưu token, KHÔNG lưu user vào localStorage */
 export async function login(email, password) {
-  const { data } = await api.post("/auth/login", { email, password });
+  const { data } = await http.post("/auth/login", { email, password });
   localStorage.setItem("token", data.token);
-  localStorage.setItem("user", JSON.stringify(data.user));
   emitAuthChanged();
   return data; // { token, user }
 }
 
-/** Đăng ký: { name, email, password } -> { token, user }
- *  ✅ KHÔNG auto-login: KHÔNG lưu token/user
- */
+/** Đăng ký (không auto-login) */
 export async function register(name, email, password) {
-  const { data } = await api.post("/auth/register", { name, email, password });
-  // Không lưu token & user để user phải đăng nhập bằng tài khoản vừa tạo
-  return data; // bạn vẫn có thể hiển thị thông báo/next step từ FE
-}
-
-export function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  emitAuthChanged();
-}
-
-/** (tùy BE) */
-export async function getMe() {
-  const { data } = await api.get("/users/me");
+  const { data } = await http.post("/auth/register", { name, email, password });
   return data;
+}
+
+/** Lấy hồ sơ của mình (dùng access token) */
+export async function getMe() {
+  const { data } = await http.get("/users/me");
+  return data;
+}
+
+/** Đăng xuất: thu hồi phiên + xóa token
+ *  (Sửa lỗi ESLint: không để catch rỗng)
+ */
+export async function logout() {
+  try {
+    await http.post("/auth/logout");
+  } catch (err) {
+    // Không làm hỏng luồng nếu logout API lỗi (token hết hạn / network)
+    console.warn("[logout] API failed:", err?.message || err);
+  } finally {
+    localStorage.removeItem("token");
+    emitAuthChanged();
+  }
 }

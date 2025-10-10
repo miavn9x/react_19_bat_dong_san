@@ -1,8 +1,37 @@
-// backend/src/modules/users/routes/user.routes.js
+// /** Users Routes
+//  *  - bảo vệ toàn bộ /users bằng auth
+//  *  - admin zone dùng requireRoleDb('admin') để chống token cũ
+//  */
+// const express = require("express");
+// const { auth, requireRoleDb } = require("../../../middlewares/auth");
+// const {
+//   getMe,
+//   updateMe,
+//   getPublicProfile,
+//   listUsers,
+//   updateRole,
+//   deleteUser,
+// } = require("../controllers/user.controller");
 
+// const router = express.Router();
+
+// router.use(auth);
+
+// // Me
+// router.get("/me", getMe);
+// router.put("/me", updateMe);
+
+// // Public profile (ẩn email)
+// router.get("/:id/public", getPublicProfile);
+
+// // Admin zone
+// router.get("/", requireRoleDb("admin"), listUsers);
+// router.patch("/:id/role", requireRoleDb("admin"), updateRole);
+// router.delete("/:id", requireRoleDb("admin"), deleteUser);
+
+// module.exports = router;
 const express = require("express");
-const auth = require("../../../middlewares/auth");
-const { requireRole } = require("../../../middlewares/auth");
+const { auth, requireRoleDb } = require("../../../middlewares/auth");
 const {
   getMe,
   updateMe,
@@ -14,19 +43,18 @@ const {
 
 const router = express.Router();
 
-// Bảo vệ toàn bộ /users bằng auth (user phải đăng nhập)
 router.use(auth);
 
-/** User tự xem/sửa hồ sơ của mình */
+// Me
 router.get("/me", getMe);
 router.put("/me", updateMe);
 
-/** ✅ Public (cho user đã đăng nhập): xem hồ sơ user khác (không lộ email) */
+// Public profile (ẩn email)
 router.get("/:id/public", getPublicProfile);
 
-/** Admin quản lý người dùng */
-router.get("/", requireRole("admin"), listUsers);
-router.patch("/:id/role", requireRole("admin"), updateRole);
-router.delete("/:id", requireRole("admin"), deleteUser);
+// Admin zone
+router.get("/", requireRoleDb("admin"), listUsers);
+router.patch("/:id/role", requireRoleDb("admin"), updateRole);
+router.delete("/:id", requireRoleDb("admin"), deleteUser);
 
 module.exports = router;

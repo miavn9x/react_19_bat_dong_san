@@ -1,36 +1,41 @@
-// frontend/src/modules/auth/hooks/useAuth.js
+
+// // ==========================================
+// // FILE 3: frontend/src/modules/auth/hooks/useAuth.js
+// // ==========================================
+
+
 import { useEffect, useState, useCallback } from "react";
 import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
   getMe,
-} from "../services/auth.js";
+  AUTH_EVENT,
+} from "../services/auth";
 
 export default function useAuth() {
-  const [user, setUser] = useState(() => {
-    try {
-      const u = localStorage.getItem("user");
-      return u ? JSON.parse(u) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null); // RAM-only
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // đồng bộ khi services phát "auth-changed"
+  // Khi token thay đổi (auth-changed) hoặc lần đầu mount → nếu có token thì /users/me
   useEffect(() => {
-    const syncUser = () => {
+    const onAuthChanged = async () => {
+      const hasToken = !!localStorage.getItem("token");
+      if (!hasToken) { setUser(null); return; }
       try {
-        const u = localStorage.getItem("user");
-        setUser(u ? JSON.parse(u) : null);
+        setLoading(true);
+        const me = await getMe();
+        setUser(me);
       } catch {
         setUser(null);
+      } finally {
+        setLoading(false);
       }
     };
-    window.addEventListener("auth-changed", syncUser);
-    return () => window.removeEventListener("auth-changed", syncUser);
+    window.addEventListener(AUTH_EVENT, onAuthChanged);
+    onAuthChanged(); // bootstrap khi reload
+    return () => window.removeEventListener(AUTH_EVENT, onAuthChanged);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -38,7 +43,6 @@ export default function useAuth() {
       setLoading(true);
       const me = await getMe();
       setUser(me);
-      localStorage.setItem("user", JSON.stringify(me));
       setError("");
     } catch (e) {
       setError(e?.response?.data?.message || "Không lấy được hồ sơ");
@@ -52,7 +56,8 @@ export default function useAuth() {
     setLoading(true);
     try {
       const { user } = await apiLogin(email, password);
-      setUser(user);
+      // Có thể dùng user trả về để điều hướng ngay
+      setUser(user || null);
       return user;
     } catch (e) {
       const msg = e?.response?.data?.message || "Đăng nhập thất bại";
@@ -63,13 +68,12 @@ export default function useAuth() {
     }
   }, []);
 
-  // ✅ Đăng ký xong KHÔNG setUser (không coi là đã đăng nhập)
   const register = useCallback(async (name, email, password) => {
     setError("");
     setLoading(true);
     try {
       const { user } = await apiRegister(name, email, password);
-      return user; // chỉ trả về để FE điều hướng sang /login
+      return user;
     } catch (e) {
       const msg = e?.response?.data?.message || "Đăng ký thất bại";
       setError(msg);

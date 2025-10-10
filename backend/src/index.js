@@ -1,10 +1,19 @@
-// backend/src/index.js
-
+/** backend/src/index.js
+ *  Điểm vào Express:
+ *  - .env, Helmet, CORS (origin cụ thể), Compression, Morgan
+ *  - trust proxy an toàn (dev=false, prod=hops)
+ *  - static /uploads (immutable 7d)
+ *  - mount /api
+ *  - 404 /api/* và error handler JSON
+ *  - kết nối MongoDB rồi listen
+ */
 const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const helmet = require("helmet");
+const compression = require("compression");
 const dotenv = require("dotenv");
 const { connectDB } = require("./config/db");
 const apiRoutes = require("./routes");
@@ -13,47 +22,69 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const isProd = process.env.NODE_ENV === "production";
 
-// (Tuỳ hạ tầng proxy/CDN) giúp đọc x-forwarded-* khi dựng canonical, rate-limit...
-app.set("trust proxy", true);
+// Ẩn fingerprint server
+app.disable("x-powered-by");
 
-// ---- Middlewares nền tảng
+// trust proxy an toàn
+if (isProd) {
+  app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS || 1));
+} else {
+  app.set("trust proxy", false);
+}
+
+// Security headers
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+// Nén response
+app.use(compression());
+
+// CORS (nhiều origin ngăn cách dấu phẩy)
+const allowed = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      if (allowed.includes(origin)) return cb(null, true);
+      cb(new Error("Not allowed by CORS: " + origin));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+    optionsSuccessStatus: 204,
   })
 );
+
+// Parsers & logger
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("dev"));
 
-// ---- Serve tĩnh thư mục uploads (lưu trực tiếp trên máy chủ)
-//  Thư mục vật lý: backend/src/uploads
+// Static /uploads (immutable 7 ngày)
 const UPLOADS_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-
-// Express không có option "immutable" -> set qua setHeaders
 app.use(
   "/uploads",
   express.static(UPLOADS_DIR, {
-    fallthrough: false, // 404 nếu không có file
-    index: false,       // không serve index.html
+    fallthrough: false,
+    index: false,
     etag: true,
-    maxAge: "7d",       // backup, sẽ ghi đè bằng setHeaders
-    setHeaders(res /*, filePath */) {
-      // 7 ngày = 604800 giây
+    maxAge: "7d",
+    setHeaders(res) {
       res.setHeader("Cache-Control", "public, max-age=604800, immutable");
     },
   })
 );
 
-// ---- Mount API
+// Mount API
 app.use("/api", apiRoutes);
 
-// ---- 404 API fallback
+// 404 cho /api/*
 app.use((req, res, next) => {
   if (req.path.startsWith("/api/")) {
     return res.status(404).json({ message: "API route not found" });
@@ -61,7 +92,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---- Error handler chuẩn JSON
+// Error handler JSON
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error("[Error]", err);
@@ -72,10 +103,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ---- Start
+// Start
 (async () => {
   await connectDB(process.env.MONGODB_URI);
-  app.listen(PORT, () =>
-    console.log(`🚀 Backend chạy tại http://localhost:${PORT}`)
-  );
+  app.listen(PORT, () => console.log(`🚀 Backend chạy tại http://localhost:${PORT}`));
 })();

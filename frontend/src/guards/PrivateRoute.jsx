@@ -1,5 +1,8 @@
-// frontend/src/guards/PrivateRoute.jsx
-// guard route riêng cho trang cần đăng nhập (dùng trong khu client)
+// // ==========================================
+// // FILE 6: frontend/src/guards/PrivateRoute.jsx
+// // ==========================================
+
+
 import { Navigate } from "react-router-dom";
 
 export default function PrivateRoute({ children }) {

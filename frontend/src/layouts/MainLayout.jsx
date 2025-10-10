@@ -1,8 +1,8 @@
 // frontend/src/layouts/MainLayout.jsx
 // Layout chính cho phần client (khách và user đã đăng nhập)
 // Bao gồm header, footer, nav, mobile drawer
-//
-import { useEffect, useRef, useState } from "react";
+
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   NavLink,
   Outlet,
@@ -10,8 +10,9 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import { logout as doLogout } from "../modules/auth/services/auth";
-import { AUTH_EVENT } from "../modules/auth/services/auth";
+
+// ✅ DÙNG useAuth thay vì đọc localStorage
+import useAuth from "../modules/auth/hooks/useAuth";
 
 function NavItem({ to, end, children, onClick }) {
   return (
@@ -47,31 +48,11 @@ export default function MainLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [user, setUser] = useState(() => {
-    try {
-      const u = localStorage.getItem("user");
-      return u ? JSON.parse(u) : null;
-    } catch {
-      return null;
-    }
-  });
 
+  const { user, logout } = useAuth(); // ✅ lấy user/ logout từ hook
   const navigate = useNavigate();
   const location = useLocation();
   const accountRef = useRef(null);
-
-  useEffect(() => {
-    const syncUser = () => {
-      try {
-        const u = localStorage.getItem("user");
-        setUser(u ? JSON.parse(u) : null);
-      } catch {
-        setUser(null);
-      }
-    };
-    window.addEventListener(AUTH_EVENT, syncUser);
-    return () => window.removeEventListener(AUTH_EVENT, syncUser);
-  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -104,23 +85,26 @@ export default function MainLayout() {
   }, []);
 
   const handleLogout = () => {
-    doLogout();
-    setUser(null);
+    logout();          // ✅ gọi hook (đã thu hồi phiên + xóa token + phát sự kiện)
     navigate("/");
   };
 
-  const initial = (user?.name || user?.email || "?").trim().charAt(0).toUpperCase();
+  // ✅ Đổi avatar -> avatarUrl, tính initial an toàn
+  const initial = useMemo(() => {
+    const src = (user?.name || user?.email || "?").toString().trim();
+    return src ? src.charAt(0).toUpperCase() : "?";
+  }, [user]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Header */}
       <header
         className={[
-          " w-full border-b border-gray-200 bg-white/90 backdrop-blur-md",
+          "w-full border-b border-gray-200 bg-white/90 backdrop-blur-md",
           scrolled ? "shadow-md" : "",
         ].join(" ")}
       >
-        <div className="mx-auto container  py-2 px-2 sm:px-6 ">
+        <div className="mx-auto container py-2 px-2 sm:px-6">
           {/* Top row: Logo + Actions */}
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
@@ -141,25 +125,39 @@ export default function MainLayout() {
               </Link>
 
               {/* Account */}
-              <div className="relative " ref={accountRef}>
+              <div className="relative" ref={accountRef}>
                 <button
                   aria-label="Tài khoản"
-                  className="flex items-center gap-2 rounded-full  border border-gray-200 px-3 py-1 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  onClick={() => setAccountOpen(!accountOpen)}
+                  className="flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  onClick={() => setAccountOpen((v) => !v)}
                 >
                   <div className="h-7 w-7 rounded-full bg-gray-100 text-gray-600 font-medium grid place-items-center overflow-hidden">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt="avatar" className="h-full w-full object-cover" />
+                    {user?.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt="avatar"
+                        className="h-full w-full object-cover"
+                      />
                     ) : user ? (
                       initial
                     ) : (
-<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
-  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5a7.5 7.5 0 0115 0" />
-</svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5a7.5 7.5 0 0115 0" />
+                      </svg>
                     )}
                   </div>
-                  {user && <span className="hidden sm:block text-sm font-medium text-indigo-700 truncate max-w-[140px]">{user.name || user.email}</span>}
+                  {user && (
+                    <span className="hidden sm:block text-sm font-medium text-indigo-700 truncate max-w-[140px]">
+                      {user.name || user.email}
+                    </span>
+                  )}
                   <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -167,19 +165,25 @@ export default function MainLayout() {
 
                 <div
                   className={[
-                    "absolute right-0 mt-[0.20px]  w-48 rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-150 origin-top-right z-50",
+                    "absolute right-0 mt-[0.2px] w-48 rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-150 origin-top-right z-50",
                     accountOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
                   ].join(" ")}
                 >
                   {!user ? (
-                    <div >
-                      <Link to="/register" className=" px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <div>
+                      <Link
+                        to="/register"
+                        className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M18 9V3.6c0-.56 0-.84-.109-1.054a1 1 0 00-.437-.437C17.24 2 16.96 2 16.4 2H7.6c-.56 0-.84 0-1.054.109a1 1 0 00-.437.437C6 2.76 6 3.04 6 3.6V9m6 3v9m-3-9h6c.828 0 1.5.895 1.5 2v7c0 1.105-.672 2-1.5 2H9c-.828 0-1.5-.895-1.5-2v-7c0-1.105.672-2 1.5-2z" />
                         </svg>
                         Đăng ký
                       </Link>
-                      <Link to="/login" className=" px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                      <Link
+                        to="/login"
+                        className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
@@ -187,14 +191,20 @@ export default function MainLayout() {
                       </Link>
                     </div>
                   ) : (
-                    <div >
-                      <Link to="/profile" className=" px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <div>
+                      <Link
+                        to="/profile"
+                        className="px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         Thông tin
                       </Link>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H5a3 3 0 01-3-3V7a3 3 0 013-3h5a3 3 0 013 3v1" />
                         </svg>
@@ -292,7 +302,9 @@ export default function MainLayout() {
               </div>
               <span className="text-lg font-bold text-gray-900">Bất Động Sản</span>
             </div>
-            <p className="text-sm text-gray-600">Nền tảng thông tin & đăng tin bất động sản. Cập nhật nhanh – Trải nghiệm mượt mà.</p>
+            <p className="text-sm text-gray-600">
+              Nền tảng thông tin & đăng tin bất động sản. Cập nhật nhanh – Trải nghiệm mượt mà.
+            </p>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3">Điều hướng</h4>
