@@ -6,6 +6,7 @@
  * - Không thay đổi nguyên lý upload đã triển khai.
  */
 
+/** backend/src/modules/uploads/index.js */
 module.exports = {
   routes: require("./routes/upload.routes"),
   models: { File: require("./models/file.model") },
