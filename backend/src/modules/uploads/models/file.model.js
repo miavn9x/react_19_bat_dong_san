@@ -1,32 +1,14 @@
-
-
 // backend/src/modules/uploads/models/file.model.js
 
 /**
  * File Model (Mongoose)
  * -----------------------------------------
- * Mô tả:
- *  - Lưu metadata của file đã upload (ảnh/video/audio).
- *  - Tái sử dụng cho nhiều module (post/product/user...).
- *  - Tương thích nhóm cũ qua trường `group`.
- *
- * Trường chính:
- *  - owner      : Người upload (ref User)
- *  - bucket     : images | videos | audios
- *  - type/ext   : MIME & phần mở rộng
- *  - originalName/url/relPath/size + (year, month, day)
- *  - label/order/isPrimary : phục vụ hiển thị & sắp xếp
- *  - entityType/entityId/entityCode : liên kết bền (để mở rộng sau)
- *  - group      : tương thích ngược (đang dùng)
- *
- * Index:
- *  - (entityType, entityId, order), (entityType, entityCode, order)
- *  - (bucket, createdAt), (group, order)
+ * - Lưu metadata của file upload (ảnh/video/audio).
+ * - Dùng chung cho nhiều module (post/product/user...).
+ * - Tương thích nhóm cũ qua trường `group`.
  */
-
 const { Schema, model, Types } = require("mongoose");
 
-/** Upload file model — version nâng cấp, tương thích group */
 const FileSchema = new Schema(
   {
     owner: { type: Types.ObjectId, ref: "User", required: true, index: true },
@@ -45,23 +27,23 @@ const FileSchema = new Schema(
     // Meta hiển thị
     label: { type: String },
     order: { type: Number, default: 0 },
-    isPrimary: { type: Boolean, default: false }, // ảnh đại diện
+    isPrimary: { type: Boolean, default: false },
 
-    // Liên kết bền (để mở rộng về sau nếu cần)
-    entityType: { type: String, index: true },         // 'user' | 'post' | 'product' | ...
+    // Liên kết bền (mở rộng sau)
+    entityType: { type: String, index: true },
     entityId:   { type: Types.ObjectId, index: true, default: null },
     entityCode: { type: String, index: true, default: "" },
 
-    // Backward-compat: đang dùng group
+    // Backward-compat
     group: { type: String, default: "" },
   },
   { timestamps: true, collection: "uploads" }
 );
 
-// Index quan trọng
+// Index
 FileSchema.index({ entityType: 1, entityId: 1, order: 1 });
 FileSchema.index({ entityType: 1, entityCode: 1, order: 1 });
 FileSchema.index({ bucket: 1, createdAt: -1 });
-FileSchema.index({ group: 1, order: 1 }); // để không phá phần cũ
+FileSchema.index({ group: 1, order: 1 });
 
 module.exports = model("File", FileSchema);

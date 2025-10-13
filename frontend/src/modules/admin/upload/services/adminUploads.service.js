@@ -1,22 +1,23 @@
+
+
 /**
- * adminUploads.service.js
- * ----------------------------------------------------
- * Mục đích:
- * - Dịch vụ gọi API upload cho trang Admin.
- * - Đồng bộ với BE: list (bucket, group, q, page, limit, sort), upload many (files), replace (file), update/delete.
+ * Admin Upload Services (FULL)
+ * ---------------------------
+ * - listFiles, uploadMany, updateMeta, replaceFile, deleteFile (API gốc)
+ * - NEW: listAllByGroup, deleteByGroupOrder, replaceByGroupOrder, setOrder
  */
 
 import { API_BASE, authHeaders } from "../config/api";
 import { xhrUpload } from "../../../../utils/xhrUpload";
 
-/** Lấy limit theo bucket để FE validate/hiển thị */
+/** Limit theo bucket */
 export async function getUploadLimit(bucket) {
   const res = await fetch(`${API_BASE}/uploads/_info/limits/${bucket}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json(); // { bucket, maxBytes }
 }
 
-/** List file (public + admin dùng) */
+/** List có phân trang */
 export async function listFiles(params = {}) {
   const { bucket, group, year, month, day, q, page = 1, limit = 20, sort } = params;
   const qp = new URLSearchParams({ page: String(page), limit: String(limit) });
@@ -33,10 +34,29 @@ export async function listFiles(params = {}) {
   return res.json();
 }
 
-/** Upload nhiều file (hoặc 1) — có tiến trình % (theo tổng request) */
+/** NEW: List toàn bộ theo group (tự phân trang) */
+export async function listAllByGroup(group) {
+  const pageSize = 20;
+  let page = 1;
+  let all = [];
+  while (true) {
+    const qp = new URLSearchParams({
+      group, page: String(page), limit: String(pageSize), sort: "order_asc"
+    });
+    const res = await fetch(`${API_BASE}/uploads?${qp.toString()}`);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    all = all.concat(data.items || []);
+    if (all.length >= (data.total || 0)) break;
+    page += 1;
+  }
+  return all;
+}
+
+/** Upload nhiều (hoặc 1) — có tiến trình % */
 export async function uploadMany({ bucket, files, group = "", startOrder = 0, labels = [], orders = [], onProgress, signal }) {
   const fd = new FormData();
-  [...files].forEach((f) => fd.append("files", f));  // name 'files' khớp BE (.any())
+  [...files].forEach((f) => fd.append("files", f));
   if (group) fd.append("group", group);
   fd.append("startOrder", String(startOrder));
   if (labels.length) fd.append("labels", labels.join(","));
@@ -51,7 +71,7 @@ export async function uploadMany({ bucket, files, group = "", startOrder = 0, la
   });
 }
 
-/** Admin: cập nhật metadata (label/group/order) */
+/** Patch meta (order/group/label) */
 export async function updateMeta({ id, patch }) {
   const res = await fetch(`${API_BASE}/uploads/${id}`, {
     method: "PATCH",
@@ -62,7 +82,7 @@ export async function updateMeta({ id, patch }) {
   return res.json();
 }
 
-/** Admin: thay file (single) — có tiến trình */
+/** Replace file theo id */
 export async function replaceFile({ id, bucket, file, onProgress, signal }) {
   const fd = new FormData();
   fd.append("file", file);
@@ -75,11 +95,51 @@ export async function replaceFile({ id, bucket, file, onProgress, signal }) {
   });
 }
 
-/** Admin: xóa file */
+/** Delete theo id */
 export async function deleteFile({ id }) {
   const res = await fetch(`${API_BASE}/uploads/${id}`, {
     method: "DELETE",
     headers: { ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/** NEW: Delete theo group + order */
+export async function deleteByGroupOrder(group, order) {
+  const res = await fetch(`${API_BASE}/uploads/_remove-by-pos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({ group, order }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+/** NEW: Replace theo group + order (single) */
+export async function replaceByGroupOrder({ group, order, bucket, file, onProgress, signal }) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("group", group);
+  fd.append("order", String(order));
+  return xhrUpload({
+    url: `${API_BASE}/uploads/_replace-by-pos/${bucket}`,
+    formData: fd,
+    headers: { ...authHeaders() },
+    onProgress,
+    signal,
+  });
+}
+
+/** NEW: setOrder (và/hoặc group) cho file id */
+export async function setOrder({ id, order, group }) {
+  const patch = {};
+  if (typeof order === "number") patch.order = order;
+  if (group) patch.group = group;
+  const res = await fetch(`${API_BASE}/uploads/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(patch),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

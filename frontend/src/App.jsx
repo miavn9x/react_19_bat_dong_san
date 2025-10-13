@@ -32,8 +32,10 @@ import UploadPlayground from "./modules/admin/upload/pages/test/UploadPlayground
 import UserUploadManager from "./modules/admin/upload/pages/UserUploadManager";
 import PublicBrowseAll from "./modules/admin/upload/pages/test/PublicBrowseAll";
 
-// 🔥 Upload pages mới (đã refactor chuẩn)
-
+// ✅ Admin Posts CRUD page
+import AdminPostsPage from "./modules/admin/post/pages/AdminPostsPage";
+import PostCreatePage from "./modules/admin/post/pages/PostCreatePage";
+import PostEditPage from "./modules/admin/post/pages/PostEditPage";
 
 const router = createBrowserRouter([
   {
@@ -55,7 +57,7 @@ const router = createBrowserRouter([
       // Auth (public)
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
-{ path: "upload/public", element: <PublicBrowseAll /> },
+      { path: "upload/public", element: <PublicBrowseAll /> },
 
       // Private (client)
       {
@@ -102,12 +104,14 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> }, // hoặc AdminDashboard riêng
       { path: "users", element: <div><UsersList />👥 Users Management</div> },
-      { path: "posts", element: <div>📰 Posts Management</div> },
-      { path: "settings", element: <div>⚙️ Settings</div> },
-      
-      { path: "search", element: <div>🔎 Kết quả tìm kiếm</div> },
 
-      // 🔥 Admin upload manager (CRUD đầy đủ)
+      // ✅ Posts
+      { path: "posts", element: <AdminPostsPage /> },
+      { path: "posts/new", element: <PostCreatePage /> },       // 👈 Trang tạo
+      { path: "posts/:slug/edit", element: <PostEditPage /> },  // 👈 Trang sửa
+
+      { path: "settings", element: <div>⚙️ Settings</div> },
+      { path: "search", element: <div>🔎 Kết quả tìm kiếm</div> },
       { path: "uploads", element: <AdminUploadManager /> },
     ],
   },

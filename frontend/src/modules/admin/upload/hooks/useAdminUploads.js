@@ -172,3 +172,44 @@ export function useUploadLimit(bucket) {
 
   return { limit, error };
 }
+
+// ... giữ nguyên các export cũ phía trên
+
+/** List TẤT CẢ file theo group (tự phân trang 20/trang) */
+export async function listAllInGroup(group, { sort = "order_asc" } = {}) {
+  const pageSize = 20;
+  let page = 1, all = [], total = 0;
+  do {
+    const res = await listFiles({ group, page, limit: pageSize, sort });
+    total = res.total;
+    all.push(...res.items);
+    page += 1;
+  } while (all.length < total);
+  return all;
+}
+
+/** Lấy file theo VỊ TRÍ (1-based) trong group */
+export async function getByPosition(group, position) {
+  const res = await listFiles({ group, sort: "order_asc", page: position, limit: 1 });
+  return (res.items && res.items[0]) || null;
+}
+
+/** Xóa file theo VỊ TRÍ (1-based) trong group */
+export async function deleteByPosition(group, position) {
+  const f = await getByPosition(group, position);
+  if (!f) return { ok: false, reason: "not_found" };
+  return deleteFile({ id: f._id });
+}
+
+/** Thay file theo VỊ TRÍ (1-based) trong group — GIỮ nguyên order */
+export async function replaceByPosition({ group, position, bucket, file, onProgress, signal }) {
+  const f = await getByPosition(group, position);
+  if (!f) throw new Error("Không tìm thấy file tại vị trí yêu cầu");
+  return replaceFile({ id: f._id, bucket, file, onProgress, signal });
+}
+
+/** Đếm tổng số file trong group (để tính startOrder) */
+export async function countInGroup(group) {
+  const res = await listFiles({ group, page: 1, limit: 1, sort: "order_asc" });
+  return res.total || 0;
+}
