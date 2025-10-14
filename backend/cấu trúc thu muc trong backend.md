@@ -151,3 +151,15 @@ Quyền (nhắc lại – đã đúng trong code)
   },
   "__v": 0
 }
+
+controllers
+└─ .....controllers.js
+models
+└─ .....models.js
+routes
+└─ .....routes.js
+services/
+└─ ......service.js
+validators/
+└─ .....validator.js
+index.js  

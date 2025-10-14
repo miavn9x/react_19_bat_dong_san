@@ -99,3 +99,78 @@ Quyền (nhắc lại – đã đúng trong code)
 | Sửa meta (PATCH)   |   ❌   |       ❌      |   ✅   |
 | Thay file (PUT)    |   ❌   |       ❌      |   ✅   |
 | Xoá (DELETE)       |   ❌   |       ❌      |   ✅   |
+
+
+
+
+Quy trình & luồng xử lý (paste vào note.ms)
+1) Vai trò & ràng buộc
+
+User: tạo/sửa bài nháp → “Gửi duyệt”.
+
+Admin: duyệt (approve) hoặc từ chối (reject) kèm lý do; khi duyệt mới trừ 1 lượt trong quota của user.
+
+Quota:
+
+Mặc định: dùng thử 3 bài (mỗi user 1 lần).
+
+Khi hết quota: user cần mua gói (Plan) để có thêm lượt.
+
+Tính phí: chỉ là phí đăng tin (không phải mua bán BĐS).
+
+Bảo mật:
+
+Không lưu refresh token ở localStorage (đã dùng HttpOnly cookie sẵn rồi) .
+
+Access token chỉ tạm thời (TTL ngắn) — có thể giữ trong memory ở FE; khi hết hạn, FE gọi /api/auth/refresh (đã có CSRF) để lấy token mới .
+
+RBAC & session revoke giữ nguyên (đang rất ổn) .
+
+2) Trạng thái bài viết
+
+status (giữ nguyên): draft|published|archived.
+
+Thêm moderation:
+
+moderation.state: draft|pending|approved|rejected.
+
+moderation.by, moderation.at, moderation.notes.
+
+Hiển thị công khai chỉ khi:
+status = "published" và moderation.state = "approved".
+
+3) Dòng đời bài viết
+
+User tạo draft → chỉnh sửa.
+
+User bấm Gửi duyệt → moderation.state = pending.
+
+Admin xem hàng đợi →
+
+Approve: hệ thống trừ 1 lượt trong các order đã trả tiền / gói còn hạn (nếu không đủ lượt → báo “User hết quota; yêu cầu mua gói”). Nếu đủ, set moderation.state="approved", đồng thời status="published" (tự gán publishedAt nếu trống).
+
+Reject: moderation.state="rejected", lưu notes lý do, không trừ quota.
+
+User có thể sửa & gửi lại nếu bị từ chối.
+
+4) Kinh doanh gói đăng bài
+
+Plan (do Admin cấu hình): code, name, priceVND, postCount, durationDays (tuỳ chọn), active.
+
+Coupon: code (unique), % giảm hoặc amountOff, ngày hiệu lực, giới hạn số lần, giới hạn theo plan.
+
+Order (mua gói): userId, planId, status (pending|paid|failed|cancelled), postsGranted, postsLeft, finalAmount, couponCode, paidAt…
+
+Quota = trial (3) + tổng postsLeft của các Order paid & còn hạn.
+
+5) Tìm kiếm & SEO BĐS
+
+Giữ text index sẵn có (title/summary/contentText/tags) .
+
+Thêm attrs cho BĐS + index để lọc:
+
+dealType (sell|rent), propertyType, price, area, bedrooms, bathrooms, location { provinceCode, districtCode, wardCode }.
+
+Index gợi ý: { "attrs.location.provinceCode":1, "attrs.location.districtCode":1, status:1, "moderation.state":1, publishedAt:-1 }, cộng thêm index theo price và area.
+
+Public GET /api/posts mở rộng query: dealType, propertyType, minPrice, maxPrice, minArea, maxArea, province, district, ward, q, tag, category.
