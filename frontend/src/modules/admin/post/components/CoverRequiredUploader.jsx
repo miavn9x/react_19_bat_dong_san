@@ -1,3 +1,4 @@
+// frontend/src/modules/admin/post/components/CoverRequiredUploader.jsx
 import { useMemo, useState } from "react";
 import UploadDropzone from "../../upload/components/UploadDropzone";
 import { useAdminUploadMany } from "../../upload/hooks/useAdminUploads";

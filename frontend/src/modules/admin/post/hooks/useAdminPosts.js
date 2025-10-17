@@ -1,9 +1,6 @@
-
-// // frontend/src/modules/admin/post/hooks/useAdminPosts.js
-
-
+// frontend/src/modules/admin/post/hooks/useAdminPosts.js
 import { useCallback, useEffect, useState } from "react";
-import { listPosts, createPost, updatePost, deletePost, setCover } from "../services/adminPosts.service";
+import { listPosts, createPost, updatePost, deletePost, setCover, moderatePost } from "../services/adminPosts.service";
 
 /** Bỏ dấu & chuẩn hoá để so khớp không dấu */
 function normalizeVN(s = "") {
@@ -20,7 +17,7 @@ function normalizeVN(s = "") {
   }
 }
 
-/** toSlug đơn giản phía FE (không cần 100% giống BE, chỉ để build tag/category slug gửi BE) */
+/** toSlug đơn giản phía FE */
 function toSlugFE(s = "") {
   return String(s || "")
     .normalize("NFD")
@@ -34,18 +31,11 @@ function toSlugFE(s = "") {
     .replace(/^-+|-+$/g, "");
 }
 
-/** Parse query dạng:
- *  - token: value (không cần quote), ví dụ: tag:seo  category:tin-tuc  author:6520fa...  slug:w-four-tech
- *  - phần còn lại là free text (qPlain)
- */
+/** parseSearchQuery / matchPostByQuery giữ nguyên như bạn đã có */
 function parseSearchQuery(qRaw = "") {
-  const out = {
-    qPlain: "",
-    tokens: {}, // { tag: "seo", category: "tin-tuc", author: "hex24", slug: "abc", id: "hex24" ... }
-  };
+  const out = { qPlain: "", tokens: {} };
   const src = String(qRaw || "").trim();
   if (!src) return out;
-
   const parts = src.split(/\s+/);
   const free = [];
   for (const p of parts) {
@@ -54,19 +44,14 @@ function parseSearchQuery(qRaw = "") {
       const k = m[1].toLowerCase();
       const v = (m[2] || "").trim();
       if (v) out.tokens[k] = v;
-    } else {
-      free.push(p);
-    }
+    } else free.push(p);
   }
   out.qPlain = free.join(" ").trim();
   return out;
 }
 
-/** Kiểm tra 1 post có khớp query (hỗ trợ tokens) */
 function matchPostByQuery(post, qRaw = "") {
   const { qPlain, tokens } = parseSearchQuery(qRaw);
-
-  // Tập dữ liệu để tìm kiếm "free text"
   const hayAll = [
     post?.title || "",
     post?.slug || "",
@@ -76,18 +61,11 @@ function matchPostByQuery(post, qRaw = "") {
     post?.category?.name || "",
     post?.category?.slug || "",
   ].join(" | ");
-
   const normHay = normalizeVN(hayAll);
-  const tokensFree = normalizeVN(qPlain)
-    .split(/\s+/)
-    .filter(Boolean);
-
-  // AND tất cả token tự do
+  const tokensFree = normalizeVN(qPlain).split(/\s+/).filter(Boolean);
   const freeOK = tokensFree.every((t) => normHay.includes(t));
   if (!freeOK) return false;
 
-  // Field tokens
-  // tag:
   if (tokens.tag) {
     const want = toSlugFE(tokens.tag);
     const has = (post?.tags || []).some(
@@ -95,7 +73,6 @@ function matchPostByQuery(post, qRaw = "") {
     );
     if (!has) return false;
   }
-  // category: / cat:
   const catTok = tokens.category || tokens.cat;
   if (catTok) {
     const want = toSlugFE(catTok);
@@ -104,7 +81,6 @@ function matchPostByQuery(post, qRaw = "") {
       toSlugFE(post?.category?.name || "") === want;
     if (!ok) return false;
   }
-  // author: (by name nếu không phải ObjectId)
   if (tokens.author) {
     const val = tokens.author.trim();
     const isHex24 = /^[a-f0-9]{24}$/i.test(val);
@@ -116,16 +92,13 @@ function matchPostByQuery(post, qRaw = "") {
       if (!normAuthor.includes(normWant)) return false;
     }
   }
-  // slug:
   if (tokens.slug) {
     const want = tokens.slug.toLowerCase();
     if (!String(post?.slug || "").toLowerCase().includes(want)) return false;
   }
-  // id:
   if (tokens.id) {
     if (String(post?._id || "") !== tokens.id.trim()) return false;
   }
-
   return true;
 }
 
@@ -145,50 +118,36 @@ export function usePostList({ status = "draft", pageSize = 12, filters = {} } = 
         const qRaw = filters?.q || "";
         const { qPlain, tokens } = parseSearchQuery(qRaw);
 
-        // Xây params cho BE
         const params = {
           page: p,
           limit: pageSize,
           status,
           owner: filters?.owner || "",
-          q: qPlain, // free text cho $text + slug regex
+          q: qPlain,
           category: tokens.category ? toSlugFE(tokens.category) : tokens.cat ? toSlugFE(tokens.cat) : "",
           tag: tokens.tag ? toSlugFE(tokens.tag) : "",
-          // author: chỉ gửi khi là ObjectId — BE mới hiểu
           author: tokens.author && /^[a-f0-9]{24}$/i.test(tokens.author) ? tokens.author : "",
         };
 
-        // Nếu query chỉ toàn field-tokens khó hỗ trợ ở BE (vd author theo tên),
-        // có thể bỏ q gửi BE để không lọc sớm.
         const hasHardTokens =
           (!!tokens.author && !/^[a-f0-9]{24}$/i.test(tokens.author)) || !!tokens.slug || !!tokens.id;
-        if (hasHardTokens && !qPlain) {
-          params.q = ""; // trả full theo status/owner/… rồi FE lọc
-        }
+        if (hasHardTokens && !qPlain) params.q = "";
 
         const data = await listPosts(params);
-
         let list = data.items || [];
 
-        // Fallback FE nếu BE chưa hỗ trợ owner
         if (filters?.owner === "admin") {
           list = list.filter((it) => (it.author?.role || "").toLowerCase() === "admin");
         } else if (filters?.owner === "user") {
           list = list.filter((it) => (it.author?.role || "").toLowerCase() !== "admin");
         }
 
-        // ✅ Fallback FE: lọc theo free text + field tokens (author name, v.v.)
-        if (qRaw) {
-          list = list.filter((it) => matchPostByQuery(it, qRaw));
-        }
+        if (qRaw) list = list.filter((it) => matchPostByQuery(it, qRaw));
 
         setItems(list);
-
-        // total: nếu có q/owner (lọc FE) thì dùng độ dài sau lọc; còn lại dùng serverTotal
         const serverTotal = Number(data.total || 0);
         const showTotal = qRaw || filters?.owner ? list.length : serverTotal || list.length;
         setTotal(showTotal);
-
         setPage(data.page || p);
         setLimit(data.limit || pageSize);
       } catch (e) {
@@ -200,9 +159,7 @@ export function usePostList({ status = "draft", pageSize = 12, filters = {} } = 
     [status, pageSize, filters]
   );
 
-  useEffect(() => {
-    load(1);
-  }, [load]);
+  useEffect(() => { load(1); }, [load]);
 
   return { items, total, page, limit, loading, error, reload: load, setPage };
 }
@@ -212,56 +169,67 @@ export function usePostCrud() {
   const [error, setError] = useState("");
 
   const create = async (payload) => {
-    setBusy(true);
-    setError("");
-    try {
-      return await createPost(payload);
-    } catch (e) {
-      setError(e.message || "Create failed");
-      throw e;
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setError("");
+    try { return await createPost(payload); }
+    catch (e) { setError(e.message || "Create failed"); throw e; }
+    finally { setBusy(false); }
   };
 
   const update = async (id, patch) => {
-    setBusy(true);
-    setError("");
-    try {
-      return await updatePost(id, patch);
-    } catch (e) {
-      setError(e.message || "Update failed");
-      throw e;
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setError("");
+    try { return await updatePost(id, patch); }
+    catch (e) { setError(e.message || "Update failed"); throw e; }
+    finally { setBusy(false); }
   };
 
   const remove = async (id) => {
-    setBusy(true);
-    setError("");
-    try {
-      return await deletePost(id);
-    } catch (e) {
-      setError(e.message || "Delete failed");
-      throw e;
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setError("");
+    try { return await deletePost(id); }
+    catch (e) { setError(e.message || "Delete failed"); throw e; }
+    finally { setBusy(false); }
   };
 
   const changeCover = async (postId, fileId) => {
-    setBusy(true);
-    setError("");
+    setBusy(true); setError("");
+    try { return await setCover(postId, fileId); }
+    catch (e) { setError(e.message || "Set cover failed"); throw e; }
+    finally { setBusy(false); }
+  };
+
+  /** ✅ NEW: đổi trạng thái cho đúng nghiệp vụ
+   * - published:
+   *     - listing  -> moderate(approve)
+   *     - article  -> update(status=published)
+   * - archived: cả hai -> update(status=archived)
+   * - draft: (nếu cần) -> update(status=draft)
+   */
+  const changeStatus = async (post, nextStatus, { note = "" } = {}) => {
+    if (!post?._id) throw new Error("Missing post id");
+    setBusy(true); setError("");
     try {
-      return await setCover(postId, fileId);
+      if (nextStatus === "published") {
+        if (post.kind === "listing") {
+          // duyệt listing qua moderate
+          return await moderatePost(post._id, { action: "approve", note });
+        } else {
+          // article
+          return await updatePost(post._id, { status: "published" });
+        }
+      }
+      if (nextStatus === "archived") {
+        return await updatePost(post._id, { status: "archived" });
+      }
+      if (nextStatus === "draft") {
+        return await updatePost(post._id, { status: "draft" });
+      }
+      throw new Error("Trạng thái không hỗ trợ");
     } catch (e) {
-      setError(e.message || "Set cover failed");
+      setError(e.message || "Change status failed");
       throw e;
     } finally {
       setBusy(false);
     }
   };
 
-  return { busy, error, create, update, remove, changeCover };
+  return { busy, error, create, update, remove, changeCover, changeStatus };
 }

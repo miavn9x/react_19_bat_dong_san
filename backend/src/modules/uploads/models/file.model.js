@@ -46,4 +46,4 @@ FileSchema.index({ entityType: 1, entityCode: 1, order: 1 });
 FileSchema.index({ bucket: 1, createdAt: -1 });
 FileSchema.index({ group: 1, order: 1 });
 
-module.exports = model("upload", FileSchema);
+module.exports = model("File", FileSchema);

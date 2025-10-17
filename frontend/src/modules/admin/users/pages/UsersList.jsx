@@ -1,3 +1,5 @@
+// frontend/src/modules/admin/users/pages/UsersList.jsx
+
 import { useCallback } from "react";
 import useAdminUsers from "../hooks/useAdminUsers";
 import UserTable from "../components/UserTable";

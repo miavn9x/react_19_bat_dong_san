@@ -36,6 +36,11 @@ import PublicBrowseAll from "./modules/admin/upload/pages/test/PublicBrowseAll";
 import AdminPostsPage from "./modules/admin/post/pages/AdminPostsPage";
 import PostCreatePage from "./modules/admin/post/pages/PostCreatePage";
 import PostEditPage from "./modules/admin/post/pages/PostEditPage";
+import AdminPlansPage from "./modules/admin/billing/pages/AdminPlansPage";
+import ModerationListingsPage from "./modules/admin/moderation/pages/ModerationListingsPage";
+import AdminCouponsPage from "./modules/admin/billing/pages/AdminCouponsPage";
+import AdminOrdersPage from "./modules/admin/billing/pages/AdminOrdersPage";
+import UserPostCreatePage from "./modules/admin/users/post/pages/UserPostCreatePage";
 
 const router = createBrowserRouter([
   {
@@ -88,6 +93,14 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
       },
+          {
+        path: "me/posts/create",
+        element: (
+          <PrivateRoute>
+            <UserPostCreatePage />
+          </PrivateRoute>
+        ),
+      },
     ],
   },
 
@@ -109,6 +122,15 @@ const router = createBrowserRouter([
       { path: "posts", element: <AdminPostsPage /> },
       { path: "posts/new", element: <PostCreatePage /> },       // 👈 Trang tạo
       { path: "posts/:slug/edit", element: <PostEditPage /> },  // 👈 Trang sửa
+
+
+   // ✅ NEW: Moderation
+      { path: "moderation/listings", element: <ModerationListingsPage /> },
+
+      // ✅ NEW: Billing
+      { path: "billing/plans", element: <AdminPlansPage /> },
+      { path: "billing/coupons", element: <AdminCouponsPage /> },
+      { path: "billing/orders", element: <AdminOrdersPage /> },
 
       { path: "settings", element: <div>⚙️ Settings</div> },
       { path: "search", element: <div>🔎 Kết quả tìm kiếm</div> },

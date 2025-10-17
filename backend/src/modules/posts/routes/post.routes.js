@@ -10,10 +10,13 @@ router.get("/", authOptional, ctrl.list);
 router.get("/:slug", authOptional, ctrl.detail);
 router.get("/:id/gallery", authOptional, ctrl.gallery);
 
-/** Admin */
-router.post("/", auth, requireRoleDb("admin"), ctrl.create);
-router.patch("/:id", auth, requireRoleDb("admin"), ctrl.update);
-router.patch("/:id/cover", auth, requireRoleDb("admin"), ctrl.setCover);
-router.delete("/:id", auth, requireRoleDb("admin"), ctrl.remove);
+/** Auth (user/admin) */
+router.post("/", auth, ctrl.create);
+router.patch("/:id", auth, ctrl.update);
+router.patch("/:id/cover", auth, ctrl.setCover);
+router.delete("/:id", auth, ctrl.remove);
+
+/** Admin: xét duyệt */
+router.patch("/:id/moderate", auth, requireRoleDb("admin"), ctrl.moderate);
 
 module.exports = router;

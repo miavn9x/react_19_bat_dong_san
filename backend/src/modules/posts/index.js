@@ -1,3 +1,4 @@
+// backend/src/modules/posts/index.js
 /** Posts Module Entry */
 module.exports = {
   routes: require("./routes/post.routes"),
